@@ -15,6 +15,7 @@
       "id": "screenshot",
       "type": "boolean",
       "label": "Capture Screenshot",
+      "description": "Capture a screenshot of the page after it has been loaded.",
       "validation": {
         "required": true
       }
@@ -31,6 +32,7 @@
       "id": "extractMarkdown",
       "type": "boolean",
       "label": "Extract Page as Markdown",
+      "description": "Extract the page content as Markdown format.",
       "validation": {
         "required": false
       }

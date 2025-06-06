@@ -1,13 +1,7 @@
 # workflows-app-firecrawl
 
-## For your first connector you will be working on Firecrawl -  a webscraping API.
- # You will have to integrate these 6 main actions:
-- Scrape
-- Batch Scrape
-- Extract
-- Map
-- Search
-- Crawl
+## About This Connector
+This integration was created as part of the Stacksync Connector Development Programme, focusing on building production-ready workflows using external APIs. This connector integrates Firecrawl, a web scraping API, into the Stacksync platform by implementing key actions like Scrape, Batch Scrape, Extract, Map, Search, and Crawl.
 
 ## 🔥 Firecrawl Connector Overview
 
