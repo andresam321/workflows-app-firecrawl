@@ -9,33 +9,31 @@
 - Search
 - Crawl
 
+## 🔥 Firecrawl Connector Overview
 
-## Next action items:
-Completed - Create a public repo on your Github account called “workflows-app-firecrawl” forking our template
-Completed - Set up the connector according to the tutorial
-Completed - Create the private app on the Workflows Developer Studio
-Start building!
-Make sure to update us as soon as you have endpoints ready. If you have any technical questions you can ping me. (edited) 
+This connector integrates with Firecrawl — a powerful web scraping API — to support the following actions:
 
+### 🚀 Main Actions:
+- **Scrape** – Scrapes a single URL and returns content in LLM-ready formats (Markdown, structured data, screenshot, HTML).
+- **Batch Scrape** – (To be implemented) Scrapes multiple URLs at once.
+- **Extract** – Extracts structured data from a single page, multiple pages, or entire sites using AI.
+- **Map** – Inputs a website and maps out all its internal URLs. Super fast.
+- **Search** – Queries the web and retrieves full content from the search results.
+- **Crawl** – Crawls all links on a page and returns their content in LLM-ready formats.
 
-## Features Description
-Scrape: scrapes a URL and get its content in LLM-ready format (markdown, structured data via LLM Extract, screenshot, html)
-Crawl: scrapes all the URLs of a web page and return content in LLM-ready format
-Map: input a website and get all the website urls - extremely fast
-Search: search the web and get full content from results
-Extract: get structured data from single page, multiple pages or entire websites with AI.
+---
 
-## ⚙️ UI Options & Field Config Guidelines
+## ⚙️ UI Options & Field Config Guidelines (for Dev Studio)
 
-Here are some useful notes for configuring fields in your `schema.json` when building actions in Dev Studio:
+These notes are for internal use when building actions with Dev Studio.
 
 ### ✅ Checkboxes
-- To render a checkbox, set:
+- To render a checkbox, just set the field's `type` to `"boolean"` and define the label:
   ```json
   {
     "id": "exampleField",
     "type": "boolean",
-    "label": "This is the checkbox label",
+    "label": "Enable this option",
     "validation": {
       "required": true
     }
