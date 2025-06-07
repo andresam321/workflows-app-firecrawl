@@ -17,19 +17,11 @@
       "label": "Capture Screenshot",
       "description": "Capture a screenshot of the page after it has been loaded.",
       "validation": {
-        "required": true
-      }
-    },
-    {
-      "id": "extractStructuredData",
-      "type": "boolean",
-      "label": "Extract Structured Data",
-      "validation": {
         "required": false
       }
     },
     {
-      "id": "extractMarkdown",
+      "id": "extract_markdown",
       "type": "boolean",
       "label": "Extract Page as Markdown",
       "description": "Extract the page content as Markdown format.",
@@ -39,6 +31,6 @@
     }
   ],
   "ui_options": {
-    "ui_order": ["url", "screenshot","extractStructuredData", "extractMarkdown"]
+    "ui_order": ["url", "screenshot", "extract_markdown"]
   }
 }

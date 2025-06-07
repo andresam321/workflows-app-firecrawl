@@ -29,7 +29,7 @@ def execute():
         )
 
     screenshot = data.get("screenshot", False)
-    extracted_markdown = data.get("extractMarkdown", False)
+    extracted_markdown = data.get("extract_markdown", False)
 
     formats = []
     if extracted_markdown:

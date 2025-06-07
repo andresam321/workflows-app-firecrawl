@@ -1,7 +1,7 @@
 from workflows_cdk import Response, Request
 from flask import request as flask_request
 from main import router
-from firecrawl import FirecrawlApp, ScrapeOptions
+from firecrawl import FirecrawlApp, JsonConfig
 import os
 import json
 import traceback
@@ -9,21 +9,24 @@ import traceback
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
-#currently not fully tested
-@router.route("/execute", methods=["POST"])
+@router.route("/execute", methods=["GET", "POST"])
+# Defines the /execute route that accepts both GET and POST requests.
+
 def execute():
-    """
-    Extracts structured data from the given URL using Firecrawl's built-in LLM extractor.
-    Currently, user-specified queries are not supported in the request,
-    but the input is recorded for UI and logging purposes.
-    """
     request = Request(flask_request)
+    # Wraps the incoming Flask request using the custom Request class to standardize data handling.
+
     data = request.data
+    # Extracts the request payload into a dictionary.
 
     url = data.get("url", "").strip()
+    # Retrieves the "url" field from the request data and removes leading/trailing spaces. Defaults to an empty string.
+
     extract_query = data.get("extract_query", "").strip()
+    # Retrieves the "extract_query" field from the request data and removes leading/trailing spaces. Defaults to an empty string.
 
     if not url.startswith("http"):
+        # Checks if the provided URL is valid (must start with http/https). If not, return a 400 error response.
         return Response(
             data={"error": f"Invalid URL format: {url}"},
             metadata={"affected_rows": 0},
@@ -31,30 +34,31 @@ def execute():
         )
 
     try:
-        scrape_result = firecrawl_client.scrape_url(
-            url=url,
-            formats=["extract"]  # no support for custom queries here
-        )
+        # Attempts to execute the extraction logic using Firecrawl.
 
-        result_data = scrape_result.model_dump(exclude_unset=True)
+        extract_result = firecrawl_client.extract(
+            urls=[url],
+            prompt=extract_query
+        )
+        # Calls the Firecrawl `extract` method with the given URL and query prompt.
 
         return Response(
-            data={
-                "extracted_data": result_data,
-                "note": (
-                    "Currently, Firecrawl automatically selects what data to extract from the page. "
-                    f"Your input — '{extract_query}' — was recorded but not applied to this extraction."
-                )
-            },
+            data={"result": extract_result.model_dump(exclude_unset=True)},
             metadata={"status": "success"}
         )
+        # Returns a successful response with the serialized result from the extract call.
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return Response(data={"error": str(e)}, metadata={"affected_rows": 0}, status_code=500)
+        # If any exception occurs, prints the full stack trace for debugging.
 
-
+        return Response(
+            data={"error": str(e)},
+            metadata={"affected_rows": 0},
+            status_code=500
+        )
+        # Returns a 500 error response with the exception message and metadata.
 
 # @router.route("/content", methods=["GET", "POST"])
 # def content():
