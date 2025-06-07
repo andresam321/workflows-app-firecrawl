@@ -9,17 +9,19 @@ import traceback
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
-@router.route("/execute", methods=["GET", "POST"])
+#currently not fully tested
+@router.route("/execute", methods=["POST"])
 def execute():
     """
-    Triggered when the workflow runs the Scrape module.
-    Scrapes a given URL and optionally returns markdown and screenshot data.
+    Extracts structured data from the given URL using Firecrawl's built-in LLM extractor.
+    Currently, user-specified queries are not supported in the request,
+    but the input is recorded for UI and logging purposes.
     """
     request = Request(flask_request)
     data = request.data
 
     url = data.get("url", "").strip()
-    # print(f"Received URL to scrape: {url}")
+    extract_query = data.get("extract_query", "").strip()
 
     if not url.startswith("http"):
         return Response(
@@ -28,35 +30,30 @@ def execute():
             status_code=400
         )
 
-    screenshot = data.get("screenshot", False)
-    extracted_markdown = data.get("extractMarkdown", False)
-
-    formats = []
-    if extracted_markdown:
-        formats.append("markdown")
-    if screenshot:
-        formats.append("screenshot")
-
-
-    # print(f"Calling Firecrawl's scrape_url with URL: {url}, formats: {formats}")
-
     try:
-        # Call Firecrawl and return JSON-safe data
         scrape_result = firecrawl_client.scrape_url(
             url=url,
-            formats=formats,
-            # options=options if options else None
+            formats=["extract"]  # no support for custom queries here
         )
 
-        # Clean JSON response from Pydantic v2
         result_data = scrape_result.model_dump(exclude_unset=True)
 
-        return Response(data=result_data, metadata={"status": "success"})
+        return Response(
+            data={
+                "extracted_data": result_data,
+                "note": (
+                    "Currently, Firecrawl automatically selects what data to extract from the page. "
+                    f"Your input — '{extract_query}' — was recorded but not applied to this extraction."
+                )
+            },
+            metadata={"status": "success"}
+        )
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return Response(data={"error": str(e)},metadata={"affected_rows": 0},status_code=500)
+        return Response(data={"error": str(e)}, metadata={"affected_rows": 0}, status_code=500)
+
 
 
 # @router.route("/content", methods=["GET", "POST"])

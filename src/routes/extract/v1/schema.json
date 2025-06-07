@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "workflows_module_schema_version": "1.0.0"
+  },
+  "fields": [
+    {
+      "id": "url",
+      "type": "string",
+      "label": "URL to Scrape",
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "id": "extract_query",
+      "type": "string",
+      "label": "What information should be extracted?",
+      "placeholder": "e.g. product details, reviews, etc.",
+      "validation": {
+        "required": false
+      }
+    }
+  ],
+  "ui_options": {
+    "ui_order": ["url","extract_query"]
+  }
+}
