@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "workflows_module_schema_version": "1.0.0"
+  },
+  "fields": [
+    {
+      "id": "url",
+      "type": "string",
+      "label": "URL to Scrape",
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "id": "screenshot",
+      "type": "boolean",
+      "label": "Capture Screenshot",
+      "description": "Capture a screenshot of the page after it has been loaded.",
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "id": "extract_markdown",
+      "type": "boolean",
+      "label": "Extract Page as Markdown",
+      "description": "Extract the page content as Markdown format.",
+      "validation": {
+        "required": false
+      }
+    }
+  ],
+  "ui_options": {
+    "ui_order": ["url", "screenshot", "extract_markdown"]
+  }
+}
