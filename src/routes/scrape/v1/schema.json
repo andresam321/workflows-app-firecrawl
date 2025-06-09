@@ -12,12 +12,71 @@
       }
     },
     {
-      "id": "screenshot",
+      "id": "screenshot_type",
+      "type": "string",
+      "label": "Screenshot Type",
+      "description": "Choose what kind of screenshot you want",
+      "ui_options": {
+        "ui_widget": "SelectWidget"
+      },
+      "choices": {
+        "values": [
+          { "value": "None" },
+          { "value": "Standard Screenshot" },
+          { "value": "Full Page Screenshot" }
+        ]
+      },
+      "validation":{
+        "required":false
+      }
+    },
+    {
+      "id": "html_type",
+      "type": "string",
+      "label": "HTML Format",
+      "description": "Choose what kind of screenshot you want",
+      "ui_options": {
+        "ui_widget": "SelectWidget"
+      },
+      "choices": {
+        "values": [
+          { "value": "None" },
+          { "value": "Clean HTML" },
+          { "value": "Raw HTML" }
+        ]
+      },
+      "validation":{
+        "required":false
+      }
+    },
+    {
+      "id": "extract_links",
       "type": "boolean",
-      "label": "Capture Screenshot",
-      "description": "Capture a screenshot of the page after it has been loaded.",
+      "label": "Link Extraction",
+      "description": "Extract All Links from the page.",
       "validation": {
         "required": false
+      }
+    },
+    {
+      "id": "extract_json",
+      "type": "boolean",
+      "label": "Json Extraction",
+      "description": "Extract JSON data from the page.",
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "id": "extract_prompt",
+      "type": "string",
+      "label": "Extraction Prompt",
+      "description": "Enter what you want to extract, e.g., 'Product names and prices'.",
+      "conditions": {
+        "extract_json": true
+      },
+      "validation": {
+        "required": true
       }
     },
     {
@@ -31,6 +90,6 @@
     }
   ],
   "ui_options": {
-    "ui_order": ["url", "screenshot", "extract_markdown"]
+    "ui_order": ["url", "screenshot_type","html_type","extract_links","extract_json","extract_prompt", "extract_markdown"]
   }
 }

@@ -1,7 +1,7 @@
 from workflows_cdk import Response, Request
 from flask import request as flask_request
 from main import router
-from firecrawl import FirecrawlApp, ScrapeOptions
+from firecrawl import FirecrawlApp, JsonConfig
 import os
 import json
 import traceback
@@ -27,17 +27,42 @@ def execute():
             metadata={"affected_rows": 0},
             status_code=400
         )
+    
 
-    screenshot = data.get("screenshot", False)
+    screenshot_type = data.get("screenshot_type", "")
+    html_type = data.get("html_type", "")
     extracted_markdown = data.get("extract_markdown", False)
+    extract_links = data.get("extract_links", False)
+    extract_json = data.get("extract_json", False)
+    prompt = data.get("extract_prompt", "").strip()
 
+    json_options = None
     formats = []
     if extracted_markdown:
         formats.append("markdown")
-    if screenshot:
+    if extract_links:
+        formats.append("links")
+    if screenshot_type == "Standard Screenshot":
         formats.append("screenshot")
+    elif screenshot_type == "Full Page Screenshot":
+        formats.append("screenshot@fullPage")
+    if html_type == "Clean HTML":
+        formats.append('html')
+    elif html_type == "Raw HTML":
+        formats.append("rawHtml")
+    if extract_json:
+        formats.append("json")
+        if prompt:
+            json_options = JsonConfig(prompt=prompt)
+        else:
+            return Response(
+                data={"error": "Prompt is required for JSON extraction."},
+                metadata={"status": "failed"},
+                status_code=400
+        )
 
 
+    print(f"Formats to scrape: {formats}")
     # print(f"Calling Firecrawl's scrape_url with URL: {url}, formats: {formats}")
 
     try:
@@ -45,13 +70,32 @@ def execute():
         scrape_result = firecrawl_client.scrape_url(
             url=url,
             formats=formats,
-            # options=options if options else None
+            json_options=json_options
         )
+
+        format_labels = {
+            "markdown": "Markdown",
+            "html": "Clean HTML",
+            "rawHtml": "Raw HTML",
+            "screenshot": "Screenshot",
+            "screenshot@fullPage": "Full Page Screenshot",
+            "links": "Links",
+            "json": "JSON"
+        }
+
 
         # Clean JSON response from Pydantic v2
         result_data = scrape_result.model_dump(exclude_unset=True)
-
-        return Response(data=result_data, metadata={"status": "success"})
+        outputs = []
+        for format_key, content in result_data.items():
+            print("line80",format_key)
+            outputs.append({
+                "type": format_key,
+                "description": format_labels.get(format_key, ""),
+                "content": content
+        })
+        # print("individual_outputs", outputs)
+        return Response(data={"output":outputs}, metadata={"status": "success"})
 
     except Exception as e:
         import traceback
