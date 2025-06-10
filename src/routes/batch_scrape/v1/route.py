@@ -1,7 +1,7 @@
 from workflows_cdk import Response, Request
 from flask import request as flask_request
 from main import router
-from firecrawl import FirecrawlApp, ScrapeOptions
+from firecrawl import FirecrawlApp, JsonConfig
 import os
 import json
 import traceback
@@ -9,53 +9,98 @@ import traceback
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
+
 @router.route("/execute", methods=["GET", "POST"])
 def execute():
     request = Request(flask_request)
     data = request.data
 
     urls = data.get("urls", [])
-    # print(f"Received URLs to scrape: {urls}")
-
     screenshot = data.get("screenshot", False)
     extracted_markdown = data.get("extractMarkdown", False)
+    extraction_prompt = data.get("extraction_prompt", "").strip()
 
     formats = []
     if extracted_markdown:
         formats.append("markdown")
     if screenshot:
         formats.append("screenshot")
+    if extraction_prompt:
+        formats.append("json")
 
-    results = []
+    # Optional: define schema for extracted data
+    json_options = None
+    if extraction_prompt:
+        json_options = {
+            "prompt": extraction_prompt,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "description": {"type": "string"}
+                },
+                "required": ["title", "description"]
+            }
+        }
 
-    for url in urls:
-        url = url.strip()
-        if not url.startswith("http"):
-            results.append({
-                "url": url,
-                "error": "Invalid URL format"
+
+    try:
+        batch_result = firecrawl_client.batch_scrape_urls(
+            urls=urls,
+            formats=formats,
+            json_options=json_options,
+            webhook_url="https://9a04-79-127-185-162.ngrok-free.app/batch_scrape/v1/webhook" 
+        )
+        # print("line52",batch_result)
+        # print("type",type(batch_result))
+        # print("dir",dir(batch_result))
+        print("data",batch_result.data)
+        outputs = []
+        for res in batch_result.data:
+            # print("line57 res", res)
+            outputs.append({
+                "url": res.url if hasattr(res, "url") else "unknown",
+                "result": res.model_dump(exclude_unset=True)
             })
-            continue  
 
-        try:
-            # print(f"Calling Firecrawl's scrape_url with URL: {url}, formats: {formats}")
-            scrape_result = firecrawl_client.scrape_url(
-                url=url,
-                formats=formats
-            )
-            results.append({
-                "url": url,
-                "result": scrape_result.model_dump(exclude_unset=True)
-            })
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            results.append({"url": url,"error": str(e)})
+        # print("outputs", outputs)
+        return Response(data=outputs, metadata={"status": "success"})
 
-    return Response(data=results, metadata={"status": "success"})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response(data={"error": str(e)}, metadata={}, status_code=500)
 
 
+@router.route("/webhook", methods=["POST"])
+def firecrawl_webhook():
+    request = Request(flask_request)
+    payload = request.data
 
+    event_type = payload.get("event")
+    job_id = payload.get("jobId")
+    data = payload.get("data", {})
+
+    if event_type == "batch_scrape.started":
+        print(f"🔵 Scrape started for job {job_id}")
+        # Optional: log status or store job in DB
+
+    elif event_type == "batch_scrape.page":
+        print(f"🟢 Page scraped: {data.get('url')}")
+        # Handle and maybe store the data from `data['content']`
+
+    elif event_type == "batch_scrape.completed":
+        print(f"✅ Scrape complete for job {job_id}")
+        # Notify user or update job status in DB
+
+    elif event_type == "batch_scrape.failed":
+        print(f"❌ Scrape failed for job {job_id}")
+        # Log error or retry logic
+
+    else:
+        print(f"⚠️ Unknown event type: {event_type}")
+
+    return Response(data={"received": True}, metadata={"status": "ok"})
 
 # @router.route("/content", methods=["GET", "POST"])
 # def content():

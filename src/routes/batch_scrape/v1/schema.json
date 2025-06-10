@@ -19,6 +19,15 @@
       }
     },
     {
+    "id": "extraction_prompt",
+    "type": "string",
+    "label": "Extraction Prompt",
+    "description": "What would you like to extract from all these URLs? (e.g., 'List of products and prices')",
+    "validation": {
+      "required": true
+    }
+  },
+    {
       "id": "screenshot",
       "type": "boolean",
       "label": "Capture Screenshot",
@@ -46,6 +55,6 @@
     }
   ],
   "ui_options": {
-    "ui_order": ["urls", "screenshot","extractStructuredData", "extractMarkdown"]
+    "ui_order": ["urls","extraction_prompt", "screenshot","extractStructuredData", "extractMarkdown"]
   }
 }

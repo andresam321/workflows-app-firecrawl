@@ -62,7 +62,7 @@ def execute():
         )
 
 
-    print(f"Formats to scrape: {formats}")
+    # print(f"Formats to scrape: {formats}")
     # print(f"Calling Firecrawl's scrape_url with URL: {url}, formats: {formats}")
 
     try:
@@ -88,7 +88,7 @@ def execute():
         result_data = scrape_result.model_dump(exclude_unset=True)
         outputs = []
         for format_key, content in result_data.items():
-            print("line80",format_key)
+            # print("line80",format_key)
             outputs.append({
                 "type": format_key,
                 "description": format_labels.get(format_key, ""),
