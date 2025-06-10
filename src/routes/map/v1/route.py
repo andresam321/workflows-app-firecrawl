@@ -1,7 +1,7 @@
 from workflows_cdk import Response, Request
 from flask import request as flask_request
 from main import router
-from firecrawl import FirecrawlApp, ScrapeOptions
+from firecrawl import FirecrawlApp
 import os
 import json
 import traceback
@@ -12,13 +12,14 @@ firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 @router.route("/execute", methods=["GET", "POST"])
 def execute():
     """
-    Triggered when the workflow runs the Scrape module.
-    Scrapes a given URL and optionally returns markdown and screenshot data.
+    Triggered when the workflow runs the Map module.
+    Input a website and get all the urls on the website - extremely fast
     """
     request = Request(flask_request)
     data = request.data
 
     url = data.get("url", "").strip()
+    search_term = data.get("extract_specific_urls", "").strip()
     # print(f"Received URL to scrape: {url}")
 
     if not url.startswith("http"):
@@ -28,24 +29,11 @@ def execute():
             status_code=400
         )
 
-    screenshot = data.get("screenshot", False)
-    extracted_markdown = data.get("extract_markdown", False)
-
-    formats = []
-    if extracted_markdown:
-        formats.append("markdown")
-    if screenshot:
-        formats.append("screenshot")
-
-
-    # print(f"Calling Firecrawl's scrape_url with URL: {url}, formats: {formats}")
-
     try:
         # Call Firecrawl and return JSON-safe data
-        scrape_result = firecrawl_client.scrape_url(
+        scrape_result = firecrawl_client.map_url (
             url=url,
-            formats=formats,
-            # options=options if options else None
+            search=search_term if search_term else None
         )
 
         # Clean JSON response from Pydantic v2
