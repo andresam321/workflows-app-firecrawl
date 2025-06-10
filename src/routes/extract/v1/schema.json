@@ -19,9 +19,17 @@
       "validation": {
         "required": false
       }
+    },
+     {
+      "id": "enable_web_search",
+      "type": "boolean",
+      "label": "Enable Web Search for better data accurancy.",
+      "validation": {
+        "required": false
+      }
     }
   ],
   "ui_options": {
-    "ui_order": ["url","extract_query"]
+    "ui_order": ["url","extract_query","structured_schema", "enable_web_search","use_async"]
   }
 }
