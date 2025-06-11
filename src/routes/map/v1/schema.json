@@ -6,19 +6,11 @@
     {
       "id": "url",
       "type": "string",
-      "label": "URL to Scrape",
+      "label": "Seach for links within the given url(link)",
       "validation": {
         "required": true
       }
-    },
-    {
-    "id": "extract_specific_urls",
-    "type": "string",
-    "label": "Links to Extract From Website",
-    "validation": {
-      "required":false
     }
-  }
   ],
   "ui_options": {
     "ui_order": ["url"]

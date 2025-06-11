@@ -1,0 +1,113 @@
+{
+  "metadata": {
+    "workflows_module_schema_version": "1.0.0"
+  },
+  "fields": [
+{
+  "type": "object",
+  "id": "format_section_header",
+  "label": "Choose one or more scrape formats below",
+  "fields": []
+},
+{
+  "type": "boolean",
+  "id": "include_markdown",
+  "label": "Markdown",
+  "default": false
+},
+{
+  "type": "boolean",
+  "id": "include_html",
+  "label": "HTML",
+  "default": false
+},
+{
+  "type": "boolean",
+  "id": "include_links",
+  "label": "Links",
+  "default": false
+},
+{
+      "id": "screenshot_type",
+      "type": "string",
+      "label": "Screenshot Type",
+      "description": "Choose what kind of screenshot you want",
+      "ui_options": {
+        "ui_widget": "SelectWidget"
+      },
+      "choices": {
+        "values": [
+          { "value": "None" },
+          { "value": "Standard Screenshot" },
+          { "value": "Full Page Screenshot" }
+        ]
+      },
+      "validation":{
+        "required":false
+      }
+    },
+{
+  "id": "lang",
+  "type": "object",
+  "label": "Select Language",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "choices": {
+    "values": [
+      { "value": "English", "label": "English" },
+      { "value": "Français", "label": "Français" },
+      { "value": "Español", "label": "Español" },
+      { "value": "中文", "label": "中文" }
+    ],
+    "default":"English"
+  },
+  "validation": {
+    "required": false
+  }
+},
+{
+  "id": "country",
+  "type": "object",
+  "label": "Select Country",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "choices": {
+    "values": [
+      { "value": "United States", "label": "United States" },
+      { "value": "Germany", "label": "Germany" },
+      { "value": "France", "label": "France" },
+      { "value": "中文", "label": "中文" }
+
+    ]
+  },
+  "validation": {
+    "required": false
+  }
+},
+{
+  "id": "tbs",
+  "type": "object",
+  "label": "Time Filter",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "choices": {
+    "values": [
+      { "value": "Past hour", "label": "Past hour" },
+      { "value": "Past day", "label": "Past day" },
+      { "value": "Past week", "label": "Past week" },
+      { "value": "Past month", "label": "Past month" },
+      { "value": "Past year", "label": "Past year" }
+    ]
+  },
+  "validation": {
+    "required": false
+  }
+}
+  ],
+  "ui_options": {
+    "ui_order": ["include_markdown","include_html","include_links","screenshot_type","lang", "country", "tbs"]
+  }
+}
