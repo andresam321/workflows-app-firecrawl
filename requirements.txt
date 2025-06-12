@@ -17,3 +17,6 @@ PyYAML>=6.0.1
 
 #firecrawl
 firecrawl-py
+
+# WTForms
+Flask-WTF

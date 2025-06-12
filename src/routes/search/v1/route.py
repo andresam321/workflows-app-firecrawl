@@ -1,7 +1,8 @@
 from workflows_cdk import Response, Request
 from flask import request as flask_request
 from main import router
-from firecrawl import FirecrawlApp
+from firecrawl import FirecrawlApp, ScrapeOptions
+from src.forms import SearchForm
 import os
 import json
 import traceback
@@ -9,41 +10,37 @@ import traceback
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
-@router.route("/execute", methods=["GET", "POST"])
+@router.route("/execute", methods=["POST"])
 def execute():
     """
-    Search the web and get full content from results
-
-    Firecrawl’s search API allows you to perform web searches and optionally scrape the search results in one operation.
-
-    Choose specific output formats (markdown, HTML, links, screenshots)
-    Search the web with customizable parameters (language, country, etc.)
-    Optionally retrieve content from search results in various formats
-    Control the number of results and set timeouts
-    
+    Search the web and get full content from results.
     """
     request = Request(flask_request)
     data = request.data
- 
 
-    url = data.get("url", "").strip()
-    include_markdown = data.get("include_markdown")
-    include_html = data.get("include_html")
-    include_links = data.get("include links")
-    screenshot_type = data.get("screenshot_type", "")
-    language_type = data.get("lang", "")
-    country_type = data.get("country", "")
-    time_filter = data.get("tbs", "")
-    
-    # print(f"Received URL to scrape: {url}")
+    # Validate incoming data using SearchForm
+    form = SearchForm(data=data)
 
-    if not url.startswith("http"):
+    if not form.validate():
+        # print("Form validation failed:", form.errors)  
         return Response(
-            data={"error": f"Invalid URL format: {url}"},
+            data={"error": "Invalid input", "details": form.errors},
             metadata={"affected_rows": 0},
             status_code=400
         )
-    
+
+
+    # Extract values from data after validation
+    search_query = form.prompt.data
+    # search_query = form.data("prompt")
+    include_markdown = form.include_markdown.data
+    html_type = form.html_type.data or ""
+    include_links = form.include_links.data
+    screenshot_type = form.screenshot_type.data or ""
+    language_type = form.lang.data or ""
+    country_type = form.country.data or ""
+    time_filter = form.tbs.data or ""
+
     formats = []
     if include_markdown:
         formats.append("markdown")
@@ -53,8 +50,10 @@ def execute():
         formats.append("screenshot")
     elif screenshot_type == "Full Page Screenshot":
         formats.append("screenshot@fullPage")
-    if include_html == "Clean HTML":
+    if html_type == "Clean HTML":
         formats.append('html')
+    elif html_type == "Raw HTML":
+        formats.append("rawHtml")
 
     language_map = {
         "English": "en",
@@ -63,29 +62,30 @@ def execute():
         "中文": "zh"
     }
     country_map = {
-        "United States": "en",
+        "United States": "us",
         "France": "fr",
-        "Español": "es",
-        "中文": "zh"
+        "Mexico": "mx",
+        "中国": "cn"
     }
     time_filter_map = {
         "Past hour": "qdr:h",
         "Past day": "qdr:d",
         "Past week": "qdr:w",
         "Past month": "qdr:m",
-        "Past Year": "qdr:y "
+        "Past year": "qdr:y"
     }
+
     language_code = language_map.get(language_type)
     country_code = country_map.get(country_type)
     time_filter_args = time_filter_map.get(time_filter)
 
     search_kwargs = {
-        "query": url,
+        "query": search_query,
         "limit": 5
     }
 
     if formats:
-        search_kwargs["scrape_options"] = { "formats": formats }
+        search_kwargs["scrape_options"] = ScrapeOptions(formats=formats)
     if language_code:
         search_kwargs["lang"] = language_code
     if country_code:
@@ -93,24 +93,20 @@ def execute():
     if time_filter_args:
         search_kwargs["tbs"] = time_filter_args
 
-  
+    print("search_kwargs", search_kwargs)
     try:
-        # Call Firecrawl and return JSON-safe data
-        scrape_result = firecrawl_client.search(
-            url=url,
-            **search_kwargs
-        )
-
-        # Clean JSON response from Pydantic v2
-        result_data = scrape_result.model_dump(exclude_unset=True)
-
+        search_results = firecrawl_client.search(**search_kwargs)
+        result_data = search_results.model_dump(exclude_unset=True)
         return Response(data=result_data, metadata={"status": "success"})
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return Response(data={"error": str(e)},metadata={"affected_rows": 0},status_code=500)
-
+        return Response(
+            data={"error": str(e)},
+            metadata={"affected_rows": 0},
+            status_code=500
+        )
 
 # @router.route("/content", methods=["GET", "POST"])
 # def content():
