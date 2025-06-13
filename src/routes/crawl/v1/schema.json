@@ -1,0 +1,147 @@
+{
+  "metadata": {
+    "workflows_module_schema_version": "1.0.0"
+  },
+  "fields": [
+
+    {
+      "id": "url",
+      "type": "string",
+      "label": "Website URL to Crawl",
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "id": "limit",
+      "type": "integer",
+      "label": "Max Number of Pages to Crawl",
+      "default": 1,
+      "validation": {
+        "required": true,
+        "min": 1
+      }
+    },
+    {
+      "id": "allowed_backward_links",
+      "type": "boolean",
+      "label": "Include Backward Links?",
+      "description": "Enable to allow crawling URLs outside the given path",
+      "default": false
+    },
+    {
+      "type": "object",
+      "id": "format_section_header",
+      "label": "Choose one or more scrape formats below",
+      "fields": []
+    },
+    {
+      "type": "boolean",
+      "id": "include_markdown",
+      "label": "Markdown",
+      "default": true
+    },
+    {
+      "type": "string",
+      "id": "html_type",
+      "label": "HTML Format",
+      "ui_options": {
+        "ui_widget": "SelectWidget"
+      },
+      "choices": {
+        "values": [
+          { "value": "None" },
+          { "value": "Clean HTML" },
+          { "value": "Raw HTML" }
+        ]
+      },
+      "default": "None"
+    },
+    {
+      "type": "string",
+      "id": "screenshot_type",
+      "label": "Screenshot Type",
+      "ui_options": {
+        "ui_widget": "SelectWidget"
+      },
+      "choices": {
+        "values": [
+          { "value": "None" },
+          { "value": "Standard Screenshot" },
+          { "value": "Full Page Screenshot" }
+        ]
+      },
+      "default": "None"
+    },
+{
+  "type": "object",
+  "id": "crawl_results",
+  "label": "Select a Crawled Page",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      { 
+        "id": "crawl_results"
+      },
+    {
+    "choices": {
+      "values": [
+          {
+            "label": "None",
+            "value": "None"
+          }
+        ]
+      }
+      }
+    ]
+  },
+  
+  "validation": { "required": false }
+},
+ {
+  "type": "object",
+  "id": "crawl_results",
+  "label": "Select a Crawled Page",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      { 
+        "id": "crawl_results"
+      },
+    {
+    "choices": {
+      "values": [
+          {
+            "label": "None",
+            "value": "None"
+          }
+        ]
+      }
+      }
+    ]
+  },
+  
+  "validation": { "required": false }
+}
+
+
+  ],
+  "ui_options": {
+    "ui_order": [
+      "url",
+      "limit",
+      "allowBackwardLinks",
+      "format_section_header",
+      "include_markdown",
+      "html_type",
+      "screenshot_type",
+      "crawl_result"
+    ]
+  }
+}

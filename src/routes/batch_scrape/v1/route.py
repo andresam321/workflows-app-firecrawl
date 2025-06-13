@@ -49,10 +49,8 @@ def execute():
         urls=urls,  # List of URLs to scrape
         formats=formats,  # List of output formats (e.g. markdown, screenshot, json)
         json_options=json_options,  # Optional structured extraction with prompt and schema
-
-        # Webhook configuration to receive real-time updates for the job
         webhook={
-            "url": "https://7908-79-127-185-164.ngrok-free.app/batch_scrape/v1/webhook",  # Your webhook endpoint that Firecrawl will POST to
+            "url": "https://6e43-79-127-185-251.ngrok-free.app/batch_scrape/v1/webhook",  # Your webhook endpoint that Firecrawl will POST to
             "metadata": {"source": "batch_ui"},  # Custom metadata to identify or filter jobs
             "events": ["started", "page", "completed", "failed"]  # List of events to subscribe to
 
@@ -84,8 +82,7 @@ def execute():
 # Define the webhook endpoint that will receive POST requests from Firecrawl
 @router.route("/webhook", methods=["POST"])
 def firecrawl_webhook():
-    request = Request(flask_request)  # Wrap the incoming Flask request
-    payload = request.data  # Extract the JSON payload from the request
+    payload = flask_request.get_json(force=True) 
 
     # If Firecrawl sends a list of events (batched), handle each event individually
     if isinstance(payload, list):
@@ -104,21 +101,27 @@ def firecrawl_webhook():
 
 # This function handles individual webhook events sent from Firecrawl
 def handle_webhook_event(payload):
-    event_type = payload.get("event")  # The type of event, such as 'started' or 'page'
-    job_id = payload.get("jobId")  # Unique ID for the scraping job
-    data = payload.get("data", {})  # Additional data related to the event, if available
-
-    # Handle each event type accordingly
+    event_type = payload.get("type")
+    job_id = payload.get("id")
+    data = payload.get("data", {})
+    # print("line107",data)
     if event_type == "batch_scrape.started":
-        print(f"Scrape started for job {job_id}")  # Log when the batch scrape starts
+        print(f"Scrape started for job {job_id}")
     elif event_type == "batch_scrape.page":
-        print(f"Page scraped: {data.get('url')}")  # Log each individual page scraped
+        if isinstance(data, list):
+            for item in data:
+                print(f"Page scraped: {item.get('metadata', {}).get('url', '[No URL]')}")
+        elif isinstance(data, dict):
+            print(f"Page scraped: {data.get('metadata', {}).get('url', '[No URL]')}")
+        else:
+            print(f"Unexpected data format for batch_scrape.page: {data}")
     elif event_type == "batch_scrape.completed":
-        print(f"Scrape complete for job {job_id}")  # Log when all pages are scraped
+        print(f"Scrape complete for job {job_id}")
     elif event_type == "batch_scrape.failed":
-        print(f"Scrape failed for job {job_id}")  # Log if the scraping job fails
+        print(f"Scrape failed for job {job_id}")
     else:
-        print(f"Unknown event type: {event_type}")  # Handle any unrecognized event types
+        print(f"Unknown event type: {event_type}")
+
 
 
 # @router.route("/content", methods=["GET", "POST"])

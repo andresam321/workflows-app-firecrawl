@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "workflows_module_schema_version": "1.0.0"
+  },
+"fields": [
+],
+"ui_options": {
+  "ui_order": [
+    "job_id"
+  ]
+}
+}
