@@ -6,20 +6,47 @@ import os
 import json
 import requests
 import builtins
+USE_MOCK_DATA = True  # Toggle this OFF when you want to use real API calls
+
 crawl_results_store = {
-    "latest": []  # This should be updated from your crawl logic
+    "latest": []
 }
-print("crawl_results_store location:", id(crawl_results_store))
+
+# if USE_MOCK_DATA:
+#     crawl_results_store["latest"] = [
+#         {
+#             "markdown": "[Day 7 - Launch Week III.Integrations DayApril 14th to 20th](...)",
+#             "rawHtml": "<html><body>Example page</body></html>",
+#             "screenshot": "https://fake-screenshot-url.com/screenshot.png",
+#             "metadata": {
+#                 "title": "15 Python Web Scraping Projects: From Beginner to Advanced",
+#                 "scrapeId": "97dcf796-c09b-43c9-b4f7-868a7a5af722",
+#                 "sourceURL": "https://www.firecrawl.dev/blog/python-web-scraping-projects",
+#                 "url": "https://www.firecrawl.dev/blog/python-web-scraping-projects",
+#                 "statusCode": 200
+#             }
+#         },
+#         {
+#             "markdown": "[Another post link](...)",
+#             "rawHtml": "<html><body>Another example</body></html>",
+#             "screenshot": "https://fake-url.com/another-screenshot.png",
+#             "metadata": {
+#                 "title": "Scraping the Web with Python: A Practical Guide",
+#                 "scrapeId": "2222aaaa-bbbb-cccc-dddd-eeeeffff1111",
+#                 "sourceURL": "https://example.com/practical-guide",
+#                 "url": "https://example.com/practical-guide",
+#                 "statusCode": 200
+#             }
+#         }
+#     ]
+
+# print("crawl_results_store location:", id(crawl_results_store))
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
 
 @router.route("/execute", methods=["POST", "GET"])
 def execute():
-    """
-    Crawl
-    Firecrawl can recursively search through a URL’s subdomains and gather the content.
-    """
     request = Request(flask_request)
     data = request.data
     form_data = data.get("form_data", {})
@@ -32,47 +59,44 @@ def execute():
             status_code=400
         )
 
-    selected_page = form_data.get("crawl_results")
+    selected_page = data.get("crawl_results")
+    print("selected page", selected_page)
 
-    # 🟡 Part 1: User selected a page (second submission)
-    if selected_page and selected_page.strip().lower() != "None":
-        stored_results = crawl_results_store.get("latest", [])
-        matched = next(
-            (r for r in stored_results if r["metadata"].get("title", "").strip() == selected_page.strip()), 
-            None
-        )
+    # Part 1: User selected a page from dropdown
+    if isinstance(selected_page, dict):
+        selected_id = selected_page.get("id")
 
-        if not matched:
-            return Response(data={"error": "Selected page not found"}, status_code=404)
+        # Reuse a previous crawl
+        if selected_id and selected_id != "None":
+            stored_results = crawl_results_store.get("latest", [])
+            matched = next(
+                (r for r in stored_results if r.get("metadata", {}).get("scrapeId") == selected_id),
+                None
+            )
+            if not matched:
+                return Response(data={"error": "Selected page not found"}, status_code=404)
 
-        return Response(
-            data={"selected_page": matched},
-            metadata={"status": "page_selected"}
-        )
+            return Response(
+                data={"selected_page": matched},
+                metadata={"status": "page_selected"}
+            )
 
-    # 🔵 Part 2: First run — Firecrawl + populate store
+        # If user selected "None", crawl fresh
+        elif selected_id == "None":
+            print("User selected None, performing new crawl...")
+
+    # Part 2: First time crawling or "None" selected
     limit = int(data.get("limit", 5))
-    allowed_backward_links = data.get("allowed_backward_links")
-    print("line56",allowed_backward_links)
     include_markdown = data.get("include_markdown")
-    html_type = data.get("html_type")
-    screenshot_type = data.get("screenshot_type")
+    html_type = data.get("html")
 
     formats = []
     if include_markdown:
         formats.append("markdown")
-    if screenshot_type == "Standard Screenshot":
-        formats.append("screenshot")
-    elif screenshot_type == "Full Page Screenshot":
-        formats.append("screenshot@fullPage")
-    if html_type == "Clean HTML":
+    if html_type:
         formats.append("html")
-    elif html_type == "Raw HTML":
-        formats.append("rawHtml")
 
     crawl_kwargs = {"url": url, "limit": limit}
-    if allowed_backward_links is not None:
-        crawl_kwargs["allow_backward_links"] = allowed_backward_links
     if formats:
         crawl_kwargs["scrape_options"] = ScrapeOptions(formats=formats)
 
@@ -89,61 +113,102 @@ def execute():
         traceback.print_exc()
         return Response(
             data={"error": str(e)},
-            metadata={"affected_rows": 0},
+            metadata={"status": "crawl_failed"},
             status_code=500
         )
 
 
 
-@router.route("/content", methods=["POST"])
+
+@router.route("/content", methods=["POST", "GET"])
 def content():
-    from flask import request as flask_request
-    request = Request(flask_request)
-    data = request.data
+    """
+    Provide dynamic content for the module UI.
+    Handles crawl_results dropdown with page titles.
+    """
+    try:
+        request = Request(flask_request)
+        data = request.data
 
-    form_data = data.get("form_data", {})
-    content_object_names = data.get("content_object_names", [])
-    print("line105", content_object_names)
+        if not data:
+            return Response(data={"message": "Missing request data"}, status_code=400)
 
-    if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
-        content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
+        form_data = data.get("form_data", {})
+        content_object_names = data.get("content_object_names", [])
+        print("content object names", content_object_names)
+        # If IDs are wrapped in objects, extract them
+        if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
+            content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
 
-    content_objects = []
+        content_objects = []
 
-    if "crawl_results" in content_object_names:
-        results = crawl_results_store.get("latest", [])
-        print("113", results)
-        dropdown_options = []
+        for content_name in content_object_names:
+            if content_name == "crawl_results":
+                results = crawl_results_store.get("latest", [])
 
-        # Add "None" option to allow re-running Firecrawl
-        for item in results:
-            # print("line120", results)
-            metadata = item.get("metadata", {})
-            title = metadata.get("title", "Untitled Page").strip()
-            url = metadata.get("url", "No URL")
-            scrape_id = metadata.get("scrapeId") or url
-            rawHtml = item.get("rawHtml")
-            screenshot = item.get("screenshot")
-            markdown = item.get("markdown")
-            # print("line128", markdown)
+                # Build dropdown options
+                dropdown_options = [{
+                    "value": {
+                        "id": "None",
+                        "label": "None"
+                    },
+                    "label": "None"
+                }]
 
-            label = f"{title} ({url})"
+                # Initialize lookup store if not already
+                if "lookup" not in crawl_results_store:
+                    crawl_results_store["lookup"] = {}
 
-            dropdown_options.append({
-                "value": {
-                    "id": scrape_id,
-                    "label": label,
-                    "markdown":markdown
-                },
-                "label": label
-            })
+                for item in results:
+                    metadata = item.get("metadata", {})
+                    print("metadata", metadata)
+                    title = metadata.get("title", "Untitled Page").strip()
+                    url = metadata.get("url", "No URL")
+                    print("url", url)
+                    scrape_id = metadata.get("scrapeId") or url
+                    print("scrapeid", scrape_id)
 
-        content_objects.append({
-            "content_object_name": "crawl_pages_dropdown",
-            "data": dropdown_options
-        })
+                    # Add to dropdown list
+                    dropdown_options.append({
+                        "value": {
+                            "id": scrape_id,
+                            "label": title,
+                        
+                        },
+                        "label": f"{title} ({url})"
+                    })
 
-    return Response(data={"content_objects": content_objects})
+                    # Store full item in lookup for later use
+                    crawl_results_store["lookup"][scrape_id] = {
+                        "meta": {
+                            "id": scrape_id,
+                            "label": title,
+                            "url": url,
+                            "title": title,
+                            "scrapeId": scrape_id
+                        },
+                        "formats": {
+                            "markdown": item.get("markdown"),
+                            "rawHtml": item.get("rawHtml"),
+                            "screenshot": item.get("screenshot")
+                        }
+                    }
+                content_objects.append({
+                    "content_object_name": "crawl_results",
+                    "data": dropdown_options
+                })
+                print("content_objects", content_objects)
+
+        return Response(data={"content_objects": content_objects})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response(
+            data={"error": str(e)},
+            metadata={"status": "content_error"},
+            status_code=500
+        )
+
 
 
 
