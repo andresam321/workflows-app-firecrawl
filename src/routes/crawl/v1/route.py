@@ -60,7 +60,7 @@ def execute():
         )
 
     selected_page = data.get("crawl_results")
-    print("selected page", selected_page)
+    # print("selected page", selected_page)
 
     # Part 1: User selected a page from dropdown
     if isinstance(selected_page, dict):
@@ -184,7 +184,6 @@ def content():
                             "id": scrape_id,
                             "label": title,
                             "url": url,
-                            "title": title,
                             "scrapeId": scrape_id
                         },
                         "formats": {

@@ -3,7 +3,7 @@
     "workflows_module_schema_version": "1.0.0"
   },
   "fields": [
-  {
+    {
       "id": "prompt",
       "type": "string",
       "label": "What would you like to search?",
@@ -11,68 +11,66 @@
         "required": true
       }
     },
-    {
-      "id": "lang",
-      "type": "string",
-      "label": "Choose the language you want search results to be written in",
-      "ui_options": {
-        "ui_widget": "SelectWidget"
-      },
-      "choices": {
-        "values": [
-          { "value": "English", "label": "English" },
-          { "value": "Français", "label": "Français" },
-          { "value": "Español", "label": "Español" },
-          { "value": "中文", "label": "中文" }
-        ]
-      },
-      "default":"English",
-      "validation": {
-        "required": false
+{
+  "id": "lang",
+  "type": "string",
+  "label": "Choose the language you want search results to be written in",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "language_options"
       }
-    },
-    {
-      "id": "country",
-      "type": "string",
-      "label": "Prioritize search results from this country or region.",
-      "ui_options": {
-        "ui_widget": "SelectWidget"
-      },
-      "choices": {
-        "values": [
-          { "value": "United States", "label": "United States" },
-          { "value": "France", "label": "France" },
-          { "value": "Mexico", "label": "Mexico" },
-          { "value": "中国", "label": "中国" }
-          
-        ]
-      },
-      "default":"United States",
-      "validation": {
-        "required": false
+    ]
+  },
+  "default": "English",
+  "validation": {
+    "required": false
+  }
+},
+{
+  "id": "country",
+  "type": "string",
+  "label": "Prioritize search results from this country or region.",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "country_options"
       }
-    },
-    {
-      "id": "tbs",
-      "type": "string",
-      "label": "Limit results to pages published within the selected timeframe.",
-      "ui_options": {
-        "ui_widget": "SelectWidget"
-      },
-      "choices": {
-        "values": [
-          { "value": "Past hour", "label": "Past hour" },
-          { "value": "Past day", "label": "Past day" },
-          { "value": "Past week", "label": "Past week" },
-          { "value": "Past month", "label": "Past month" },
-          { "value": "Past year", "label": "Past year" }
-        ]
-      },
-      "default":"Past day",
-      "validation": {
-        "required": false
+    ]
+  },
+  "default": "United States",
+  "validation": {
+    "required": false
+  }
+},
+{
+  "id": "tbs",
+  "type": "string",
+  "label": "Limit results to pages published within the selected timeframe.",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "time_filter_options"
       }
-    },
+    ]
+  },
+  "default": "Past day",
+  "validation": {
+    "required": false
+  }
+},
     {
       "type": "object",
       "id": "format_section_header",
@@ -85,60 +83,92 @@
       "label": "Markdown",
       "default": false
     },
-      {
+    {
       "type": "object",
       "id": "links_header",
       "label": "Include URLs Where Data Was Found",
       "fields": []
     },
-      {
+    {
       "type": "boolean",
       "id": "include_links",
       "label": "Links",
       "default": false
     },
     {
-    "id": "html_type",
-    "type": "string",
-    "label": "HTML Format",
-    "description": "Choose what kind of screenshot you want",
-    "ui_options": {
-      "ui_widget": "SelectWidget"
+      "id": "html_type",
+      "type": "string",
+      "label": "HTML Format",
+      "description": "Choose what kind of HTML you want to include",
+      "ui_options": {
+        "ui_widget": "SelectWidget"
+      },
+      "content": {
+        "type": ["managed"],
+        "content_objects": [
+          {
+            "id": "html_format_options"
+          }
+        ]
+      },
+      "default": "None",
+      "validation": {
+        "required": false
+      }
     },
-    "choices": {
-      "values": [
-        { "value": "None" },
-        { "value": "Clean HTML" },
-        { "value": "Raw HTML" }
-      ]
-    },
-    "default":"None",
-    "validation":{
-      "required":false
-    }
-  },
     {
       "id": "screenshot_type",
       "type": "string",
       "label": "Select Screenshot Type",
       "description": "Choose what kind of screenshot you want",
       "ui_options": {
-          "ui_widget": "SelectWidget"
+        "ui_widget": "SelectWidget"
       },
-        "choices": {
-          "values": [
-            { "value": "None" },
-            { "value": "Standard Screenshot" },
-            { "value": "Full Page Screenshot" }
-          ]
-        },
-        "default":"None",
-        "validation":{
-          "required":false
-        }
+      "content": {
+        "type": ["managed"],
+        "content_objects": [
+          {
+            "id": "screenshot_format_options"
+          }
+        ]
+      },
+      "default": "None",
+      "validation": {
+        "required": false
       }
+    },
+    {
+  "type": "object",
+  "id": "search_results",
+  "label": "Select a Searched Page",
+  "description":"Must Select None to start a new search",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "search_results"
+      }
+    ]
+  },
+  "validation": {
+    "required": true
+  }
+}
   ],
   "ui_options": {
-    "ui_order": ["prompt", "include_markdown","html_type","include_links","screenshot_type","lang", "country", "tbs"]
+    "ui_order": [
+      "prompt",
+      "include_markdown",
+      "html_type",
+      "include_links",
+      "screenshot_type",
+      "lang",
+      "country",
+      "tbs",
+      "search_results"
+    ]
   }
 }

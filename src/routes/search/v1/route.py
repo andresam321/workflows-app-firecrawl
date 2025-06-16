@@ -7,17 +7,21 @@ import os
 import json
 import traceback
 
+search_results_object = {
+    "latest": []
+}
 # Initialize the Firecrawl client using the API key from environment variables
+print("search res object", search_results_object)
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
-@router.route("/execute", methods=["POST"])
+@router.route("/execute", methods=["POST", "GET"])
 def execute():
     """
     Search the web and get full content from results.
     """
     request = Request(flask_request)
     data = request.data
-
+    print("line20", data)
     # Validate incoming data using SearchForm
     form = SearchForm(data=data)
 
@@ -28,7 +32,31 @@ def execute():
             metadata={"affected_rows": 0},
             status_code=400
         )
+    selected_page = data.get("search_results")
+    print("selected page", selected_page)
 
+    # Part 1: User selected a page from dropdown
+    if isinstance(selected_page, dict):
+        selected_url = selected_page.get("url")
+
+        # Reuse a previous crawl
+        if selected_url and selected_url != "None":
+            stored_results = search_results_object.get("latest", [])
+            matched = next(
+                (r for r in stored_results if r.get("url") == selected_url),
+                None
+            )
+            if not matched:
+                return Response(data={"error": "Selected page not found"}, status_code=404)
+
+            return Response(
+                data={"selected_page": matched},
+                metadata={"status": "page_selected"}
+            )
+
+        # If user selected "None", crawl fresh
+        elif selected_url == "None":
+            print("User selected None, performing new crawl...")
 
     # Extract values from data after validation
     search_query = form.prompt.data
@@ -81,7 +109,7 @@ def execute():
 
     search_kwargs = {
         "query": search_query,
-        "limit": 5
+        "limit": 1
     }
 
     if formats:
@@ -97,6 +125,7 @@ def execute():
     try:
         search_results = firecrawl_client.search(**search_kwargs)
         result_data = search_results.model_dump(exclude_unset=True)
+        search_results_object["latest"] = result_data.get("data", [])
         return Response(data=result_data, metadata={"status": "success"})
 
     except Exception as e:
@@ -108,79 +137,126 @@ def execute():
             status_code=500
         )
 
-# @router.route("/content", methods=["GET", "POST"])
-# def content():
-#     """
-#     This is the function that goes and fetches the necessary data to populate the possible choices in dynamic form fields.
-#     For example, if you have a module to delete a contact, you would need to fetch the list of contacts to populate the dropdown
-#     and give the user the choice of which contact to delete.
+@router.route("/content", methods=["GET", "POST"])
+def content():
+    request = Request(flask_request)
+    data = request.data
 
-#     An action's form may have multiple dynamic form fields, each with their own possible choices. Because of this, in the /content route,
-#     you will receive a list of content_object_names, which are the identifiers of the dynamic form fields. A /content route may be called for one or more content_object_names.
+    form_data = data.get("form_data", {})
+    content_object_names = data.get("content_object_names", [])
+    print("Form Data:", form_data)
+    print("Requested content_object_names:", content_object_names)
 
-#     Every data object takes the shape of:
-#     {
-#         "value": "value",
-#         "label": "label"
-#     }
-    
-#     Args:
-#         data:
-#             form_data:
-#                 form_field_name_1: value1
-#                 form_field_name_2: value2
-#             content_object_names:
-#                 [
-#                     {   "id": "content_object_name_1"   }
-#                 ]
-#         credentials:
-#             connection_data:
-#                 value: (actual value of the connection)
+    # Flatten structure if it's a list of dicts
+    if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
+        content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
 
-#     Return:
-#         {
-#             "content_objects": [
-#                 {
-#                     "content_object_name": "content_object_name_1",
-#                     "data": [{"value": "value1", "label": "label1"}]
-#                 },
-#                 ...
-#             ]
-#         }
-#     """
-#     request = Request(flask_request)
+    content_objects = []
 
-#     data = request.data
+    for content_object_name in content_object_names:
+        if content_object_name == "html_format_options":
+            data = [
+                {"value": "None", "label": "None"},
+                {"value": "Clean HTML", "label": "Clean HTML"},
+                {"value": "Raw HTML", "label": "Raw HTML"}
+            ]
+            content_objects.append({
+                "content_object_name": "html_format_options",
+                "data": data
+            })
 
-#     form_data = data.get("form_data", {})
-#     content_object_names = data.get("content_object_names", [])
-    
-#     # Extract content object names from objects if needed
-#     if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
-#         content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
+        if content_object_name == "screenshot_format_options":
+            data = [
+                {"value": "None", "label": "None"},
+                {"value": "Standard Screenshot", "label": "Standard Screenshot"},
+                {"value": "Full Page Screenshot", "label": "Full Page Screenshot"}
+            ]
+            content_objects.append({
+                "content_object_name": "screenshot_format_options",
+                "data": data
+            })
 
-#     content_objects = [] # this is the list of content objects that will be returned to the frontend
+        if content_object_name == "time_filter_options":
+            content_objects.append({
+                "content_object_name": "time_filter_options",
+                "data": [
+                    {"value": "Past hour", "label": "Past hour"},
+                    {"value": "Past day", "label": "Past day"},
+                    {"value": "Past week", "label": "Past week"},
+                    {"value": "Past month", "label": "Past month"},
+                    {"value": "Past year", "label": "Past year"}
+                ]
+            })
 
-#     for content_object_name in content_object_names:
-#         if content_object_name == "requested_content_object_1":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_1",
-#                     "data": data
-#                 })
-#         elif content_object_name == "requested_content_object_2":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_2",
-#                     "data": data
-#                 })
-    
-#     return Response(data={"content_objects": content_objects})
+        if content_object_name == "country_options":
+            content_objects.append({
+                "content_object_name": "country_options",
+                "data": [
+                    {"value": "United States", "label": "United States"},
+                    {"value": "France", "label": "France"},
+                    {"value": "Mexico", "label": "Mexico"},
+                    {"value": "中国", "label": "中国"}
+                ]
+            })
+
+        if content_object_name == "language_options":
+            content_objects.append({
+                "content_object_name": "language_options",
+                "data": [
+                    {"value": "English", "label": "English"},
+                    {"value": "Français", "label": "Français"},
+                    {"value": "Español", "label": "Español"},
+                    {"value": "中文", "label": "中文"}
+                ]
+            })
+        if content_object_name == "search_results":
+            results = search_results_object.get("latest", [])
+
+            dropdown_options = [{
+                "value": {
+                        "id": "None",
+                        "label": "None"
+                    },
+                "label": "None"
+            }]
+
+            if "lookup" not in search_results_object:
+                search_results_object["lookup"] = {}
+
+            for item in results:
+                # print("line226 item", item)
+                metadata = item.get("metadata", {})
+                title = item.get("title", "Untitled Page").strip()
+                url = item.get("url", "No URL")
+                description = item.get("description")
+                
+                # print("url", url)
+
+                dropdown_options.append({
+                    "value": {
+                        "url": url,
+                        "label": title,
+                        
+                        },
+                    "label": f"{title} ({url})"
+                })
+                search_results_object["lookup"][url] = {
+                        "meta": {
+                            "label": title,
+                            "url": url,
+                            "description": description,
+
+                        },
+                        "formats": {
+                            "markdown": item.get("markdown"),
+                            "rawHtml": item.get("rawHtml"),
+                            "screenshot": item.get("screenshot")
+                        }
+                    }
+            content_objects.append({
+                "content_object_name": "search_results",
+                "data": dropdown_options
+            })
+            print("content_objects", content_objects)
+
+    return Response(data={"content_objects": content_objects})
