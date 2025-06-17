@@ -34,7 +34,7 @@
       "id": "html_type",
       "type": "string",
       "label": "HTML Format",
-      "description": "Choose what kind of screenshot you want",
+      "description": "Choose what kind an HTML Format",
       "ui_options": {
         "ui_widget": "SelectWidget"
       },
@@ -87,9 +87,29 @@
       "validation": {
         "required": false
       }
-    }
+    },
+  {
+  "type": "object",
+  "id": "format_options",
+  "label": "Select a format to display",
+  "description":"Must select None to start a new scrape",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "format_options"
+      }
+    ]
+  },
+  "validation": {
+    "required": true
+  }
+}
   ],
   "ui_options": {
-    "ui_order": ["url", "screenshot_type","html_type","extract_links","extract_json","extract_prompt", "extract_markdown"]
+    "ui_order": ["url", "screenshot_type","html_type","extract_links","extract_json","extract_prompt", "extract_markdown","scrape_results"]
   }
 }

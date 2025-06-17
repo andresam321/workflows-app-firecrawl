@@ -144,8 +144,8 @@ def content():
 
     form_data = data.get("form_data", {})
     content_object_names = data.get("content_object_names", [])
-    print("Form Data:", form_data)
-    print("Requested content_object_names:", content_object_names)
+    # print("Form Data:", form_data)
+    # print("Requested content_object_names:", content_object_names)
 
     # Flatten structure if it's a list of dicts
     if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):

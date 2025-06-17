@@ -6,6 +6,9 @@ import os
 import json
 import traceback
 
+scrape_results_object = {
+    "latest": []
+}
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
@@ -28,6 +31,28 @@ def execute():
             status_code=400
         )
     
+    selected_page = data.get("format_options")
+    # print("selected page", selected_page)
+    # Part 1: User selected a page from dropdown
+    if isinstance(selected_page, dict):
+        selected_id = selected_page.get("id")
+
+        # find format idk
+        if selected_id and selected_id != "None":
+            stored_results = scrape_results_object.get("lookup", [])
+            matched = stored_results.get(selected_id)
+
+            if not matched:
+                return Response(data={"error": "Selected page not found, start a new scrape"}, status_code=404)
+
+            return Response(
+                data={"selected_page": matched},
+                metadata={"status": "page_selected"}
+            )
+
+        # If user selected "None", scrape fresh
+        elif selected_id == "None":
+            print("User selected None, performing new crawl...")
 
     screenshot_type = data.get("screenshot_type", "")
     html_type = data.get("html_type", "")
@@ -86,6 +111,8 @@ def execute():
 
         # Clean JSON response from Pydantic v2
         result_data = scrape_result.model_dump(exclude_unset=True)
+        scrape_results_object["latest"] = result_data
+        # print("scrape results",scrape_results_object["latest"] )
         outputs = []
         for format_key, content in result_data.items():
             # print("line80",format_key)
@@ -95,6 +122,17 @@ def execute():
                 "content": content
         })
         # print("individual_outputs", outputs)
+        metadata_block = next((item for item in outputs if item.get("type") == "metadata"), None)
+
+        if metadata_block:
+            metadata_content = metadata_block.get("content", {})
+            status_code = metadata_content.get("statusCode", 200)
+            if status_code != 200:
+                return Response(
+                    data={"error": f"Scrape failed with status code {status_code}. The site may have blocked the request."},
+                    metadata={"status": "scrape_failed"},
+                    status_code=502
+                )
         return Response(data={"output":outputs}, metadata={"status": "success"})
 
     except Exception as e:
@@ -103,79 +141,66 @@ def execute():
         return Response(data={"error": str(e)},metadata={"affected_rows": 0},status_code=500)
 
 
-# @router.route("/content", methods=["GET", "POST"])
-# def content():
-#     """
-#     This is the function that goes and fetches the necessary data to populate the possible choices in dynamic form fields.
-#     For example, if you have a module to delete a contact, you would need to fetch the list of contacts to populate the dropdown
-#     and give the user the choice of which contact to delete.
+@router.route("/content", methods=["POST","GET"])
+def content():
+    request = Request(flask_request)
+    data = request.data
+    # print("data",data )
+    form_data = data.get("form_data", {})
+    # print("form data",form_data)
+    markdown = form_data.get("markdown", [])  # This is what was selected in the scrape step
+    # print("markdown ", markdown)
+    content_object_names = data.get("content_object_names", [])
+    if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
+        content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
+    # print("content object name", content_object_names)
 
-#     An action's form may have multiple dynamic form fields, each with their own possible choices. Because of this, in the /content route,
-#     you will receive a list of content_object_names, which are the identifiers of the dynamic form fields. A /content route may be called for one or more content_object_names.
+    content_objects = []
+    label_map = {
+        "markdown": "Markdown",
+        "rawHtml": "Raw HTML",
+        "html": "Clean HTML",
+        "json": "JSON",
+        "links": "Links",
+        "screenshot": "Screenshot",
+        "screenshot@fullPage": "Full Page Screenshot",
+        "metadata": "Metadata"
+    }
 
-#     Every data object takes the shape of:
-#     {
-#         "value": "value",
-#         "label": "label"
-#     }
-    
-#     Args:
-#         data:
-#             form_data:
-#                 form_field_name_1: value1
-#                 form_field_name_2: value2
-#             content_object_names:
-#                 [
-#                     {   "id": "content_object_name_1"   }
-#                 ]
-#         credentials:
-#             connection_data:
-#                 value: (actual value of the connection)
+    for content_object_name in content_object_names:
+        # print("content object name", content_object_name)
+        if content_object_name == "format_options":
+            result_data = scrape_results_object.get("latest", {})
+            if not isinstance(result_data, dict):
+                result_data = {}
+            # print("result dataaaaaaaa", result_data)
+            dropdown_options = [{
+                "value": {"id": "None", "label": "None"},
+                "label": "None"
+            }]
+            
+            scrape_results_object["lookup"] = {}
 
-#     Return:
-#         {
-#             "content_objects": [
-#                 {
-#                     "content_object_name": "content_object_name_1",
-#                     "data": [{"value": "value1", "label": "label1"}]
-#                 },
-#                 ...
-#             ]
-#         }
-#     """
-#     request = Request(flask_request)
+            for key, content in result_data.items():
+                # print("line 186", key)
+                if content:
+                    readable_label = label_map.get(key, key)
+                    # print("readable lable", readable_label)
+                    dropdown_options.append({
+                        "value": {"id": key, "label": readable_label},
+                        "label": readable_label
+                    })
+                    scrape_results_object["lookup"][key] = {
+                        "meta": {
+                            "format": key,
+                            "content": content,
+                        }
+                    }
 
-#     data = request.data
+            content_objects.append({
+                "content_object_name": "format_options",
+                "data": dropdown_options
+            })
 
-#     form_data = data.get("form_data", {})
-#     content_object_names = data.get("content_object_names", [])
-    
-#     # Extract content object names from objects if needed
-#     if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
-#         content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
 
-#     content_objects = [] # this is the list of content objects that will be returned to the frontend
-
-#     for content_object_name in content_object_names:
-#         if content_object_name == "requested_content_object_1":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_1",
-#                     "data": data
-#                 })
-#         elif content_object_name == "requested_content_object_2":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_2",
-#                     "data": data
-#                 })
-    
-#     return Response(data={"content_objects": content_objects})
+    return Response(data={"content_objects": content_objects})
