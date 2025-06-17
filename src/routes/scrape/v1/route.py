@@ -37,7 +37,7 @@ def execute():
     if isinstance(selected_page, dict):
         selected_id = selected_page.get("id")
 
-        # find format idk
+        # find format 
         if selected_id and selected_id != "None":
             stored_results = scrape_results_object.get("lookup", [])
             matched = stored_results.get(selected_id)
