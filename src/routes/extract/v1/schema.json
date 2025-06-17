@@ -4,11 +4,18 @@
   },
   "fields": [
     {
-      "id": "url",
-      "type": "string",
-      "label": "URL to Scrape",
+      "id": "urls",
+      "type": "array",
+      "label": "URLs to Extract",
+      "items": {
+        "type": "string"
+      },
+      "ui_options": {
+        "item_label": "URL"
+      },
       "validation": {
-        "required": true
+        "required": true,
+        "minItems": 1
       }
     },
     {
@@ -27,9 +34,29 @@
       "validation": {
         "required": false
       }
-    }
+    },
+      {
+  "type": "object",
+  "id": "extract_results",
+  "label": "Select a URL to display extracted data",
+  "description":"Must select None to start a new extract",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "extract_results"
+      }
+    ]
+  },
+  "validation": {
+    "required": true
+  }
+}
   ],
   "ui_options": {
-    "ui_order": ["url","extract_query","structured_schema", "enable_web_search","use_async"]
+    "ui_order": ["url","extract_query","structured_schema", "enable_web_search","extract_results"]
   }
 }
