@@ -6,21 +6,37 @@ import os
 import json
 import traceback
 
+map_results_object = {
+    'latest': []
+}
 # Initialize the Firecrawl client using the API key from environment variables
+firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+
+from workflows_cdk import Response, Request
+from flask import request as flask_request
+from main import router
+from firecrawl import FirecrawlApp
+import os
+import traceback
+
+# Memory store for scraped results
+map_results_object = {}
+
+# Initialize Firecrawl client
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
 @router.route("/execute", methods=["GET", "POST"])
 def execute():
     """
     Triggered when the workflow runs the Map module.
-    Input a website and get all the urls on the website - extremely fast
+    Input a website and get all the urls on the website - extremely fast.
     """
     request = Request(flask_request)
     data = request.data
 
     url = data.get("url", "").strip()
-    search_term = data.get("extract_specific_urls", "").strip()
-    # print(f"Received URL to scrape: {url}")
+    search_term = data.get("search_term", "").strip().lower()
+    start_new_map = data.get("start_new_map", False)
 
     if not url.startswith("http"):
         return Response(
@@ -30,96 +46,123 @@ def execute():
         )
 
     try:
-        # Call Firecrawl and return JSON-safe data
-        scrape_result = firecrawl_client.map_url (
+        # Use memory if available and not forcing remap
+        if url in map_results_object and not start_new_map:
+            all_links = map_results_object[url]
+            if search_term:
+                filtered_links = [link for link in all_links if search_term in link.lower()]
+            else:
+                filtered_links = all_links
+            if not filtered_links:
+                return Response(
+                    data={"message": f"No links found for '{search_term}' on {url}."},
+                    metadata={"status": "no_matches"},
+                    status_code=200  # Still 200, just no results
+            )
+
+            return Response(
+                data={"links": filtered_links},
+                metadata={"status": "from_memory"}
+            )
+
+        # Call Firecrawl (new map or forced remap)
+        scrape_result = firecrawl_client.map_url(
             url=url,
             search=search_term if search_term else None
         )
 
-        # Clean JSON response from Pydantic v2
+        # Parse and store results
         result_data = scrape_result.model_dump(exclude_unset=True)
+        links = result_data.get("links", [])
 
-        return Response(data=result_data, metadata={"status": "success"})
+        # Store in memory under URL key
+        map_results_object[url] = links
+        print("line80",map_results_object)
+        return Response(
+            data={"links": links},
+            metadata={"status": "fresh_scrape"}
+        )
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
-        return Response(data={"error": str(e)},metadata={"affected_rows": 0},status_code=500)
+        return Response(
+            data={"error": str(e)},
+            metadata={"status": "error"},
+            status_code=500
+        )
 
 
-# @router.route("/content", methods=["GET", "POST"])
+# @router.route("/content", methods=["POST", "GET"])
 # def content():
 #     """
-#     This is the function that goes and fetches the necessary data to populate the possible choices in dynamic form fields.
-#     For example, if you have a module to delete a contact, you would need to fetch the list of contacts to populate the dropdown
-#     and give the user the choice of which contact to delete.
-
-#     An action's form may have multiple dynamic form fields, each with their own possible choices. Because of this, in the /content route,
-#     you will receive a list of content_object_names, which are the identifiers of the dynamic form fields. A /content route may be called for one or more content_object_names.
-
-#     Every data object takes the shape of:
-#     {
-#         "value": "value",
-#         "label": "label"
-#     }
-    
-#     Args:
-#         data:
-#             form_data:
-#                 form_field_name_1: value1
-#                 form_field_name_2: value2
-#             content_object_names:
-#                 [
-#                     {   "id": "content_object_name_1"   }
-#                 ]
-#         credentials:
-#             connection_data:
-#                 value: (actual value of the connection)
-
-#     Return:
-#         {
-#             "content_objects": [
-#                 {
-#                     "content_object_name": "content_object_name_1",
-#                     "data": [{"value": "value1", "label": "label1"}]
-#                 },
-#                 ...
-#             ]
-#         }
+#     Provide dynamic content for the module UI.
+#     Handles map results dropdown with page titles.
 #     """
-#     request = Request(flask_request)
+#     try:
+#         request = Request(flask_request)
+#         data = request.data
 
-#     data = request.data
+#         if not data:
+#             return Response(data={"message": "Missing request data"}, status_code=400)
 
-#     form_data = data.get("form_data", {})
-#     content_object_names = data.get("content_object_names", [])
-    
-#     # Extract content object names from objects if needed
-#     if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
-#         content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
+#         form_data = data.get("form_data", {})
+#         print("form_data", form_data)
+#         content_object_names = data.get("content_object_names", [])
 
-#     content_objects = [] # this is the list of content objects that will be returned to the frontend
+#         if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
+#             content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
 
-#     for content_object_name in content_object_names:
-#         if content_object_name == "requested_content_object_1":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_1",
-#                     "data": data
+#         content_objects = []
+
+#         for content_name in content_object_names:
+#             if content_name == "map_results":
+#                 # Ensure memory is populated before filtering
+#                 results = map_results_object.get("latest", {})
+#                 all_links = results
+
+#                 if not all_links:
+#                     return Response(
+#                         data={"message": "No links available. Run the Map action by selecting 'None' first."},
+#                         status_code=400
+#                     )
+
+#                 # Optional filtering using the search term
+#                 search_term = form_data.get("search_term", "").strip().lower()
+#                 if search_term:
+#                     filtered_links = [link for link in all_links if search_term in link.lower()]
+#                 else:
+#                     filtered_links = all_links
+
+#                 dropdown_options = [{
+#                     "value": {
+#                         "url": "None"
+#                     },
+#                     "label": "None"
+#                 }]
+
+#                 for url in list(filtered_links.keys())[:25]:
+#                     dropdown_options.append({
+#                         "value": {"url": url},
+#                         "label": url[:100] + "..." if len(url) > 100 else url
+#                     })
+
+#                 # Store to lookup for later (optional, depending on your implementation)
+#                 if "lookup" not in map_results_object:
+#                     map_results_object["lookup"] = {}
+#                 for url in filtered_links[:25]:
+#                     map_results_object["lookup"][url] = {"meta": {"url": url}}
+
+#                 content_objects.append({
+#                     "content_object_name": "map_results",
+#                     "data": dropdown_options
 #                 })
-#         elif content_object_name == "requested_content_object_2":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_2",
-#                     "data": data
-#                 })
-    
-#     return Response(data={"content_objects": content_objects})
+
+#         return Response(data={"content_objects": content_objects})
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return Response(
+#             data={"error": str(e)},
+#             metadata={"status": "content_error"},
+#             status_code=500
+#         )

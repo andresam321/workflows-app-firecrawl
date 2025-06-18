@@ -52,7 +52,7 @@ def execute():
 
         # If user selected "None", scrape fresh
         elif selected_id == "None":
-            print("User selected None, performing new crawl...")
+            print("User selected None, performing new scrape...")
 
     screenshot_type = data.get("screenshot_type", "")
     html_type = data.get("html_type", "")

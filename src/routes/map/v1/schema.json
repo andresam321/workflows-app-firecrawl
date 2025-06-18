@@ -4,15 +4,28 @@
   },
   "fields": [
     {
+  "id": "start_new_map",
+  "type": "boolean",
+  "label": "Start new map?",
+  "description": "Enable this to force a new scrape even if results exist"
+},
+    {
       "id": "url",
       "type": "string",
-      "label": "Seach for links within the given url(link)",
+      "label": "Filter links by keyword",
+      "description":"Only show links that contain this word or phrase (e.g., 'blog', 'contact', 'pricing')",
       "validation": {
         "required": true
       }
-    }
+    },
+    {
+  "id": "search_term",
+  "type": "string",
+  "label": "Filter links (optional)",
+  "description": "Enter a keyword to filter mapped links (e.g., 'blog', 'pricing')"
+}
   ],
   "ui_options": {
-    "ui_order": ["url"]
+    "ui_order": ["start_new_map","url","search_term"]
   }
 }
