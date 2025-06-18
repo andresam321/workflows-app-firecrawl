@@ -52,9 +52,29 @@
       "validation": {
         "required": false
       }
-    }
+    },
+      {
+  "type": "object",
+  "id": "batch_scrape_results",
+  "label": "Select a url to render",
+  "description":"Must select None to start a new batch scrape",
+  "ui_options": {
+    "ui_widget": "SelectWidget"
+  },
+  "content": {
+    "type": ["managed"],
+    "content_objects": [
+      {
+        "id": "batch_scrape_results"
+      }
+    ]
+  },
+  "validation": {
+    "required": true
+  }
+}
   ],
   "ui_options": {
-    "ui_order": ["urls","extraction_prompt", "screenshot","extractStructuredData", "extractMarkdown"]
+    "ui_order": ["urls","extraction_prompt", "screenshot","extractStructuredData", "extractMarkdown","batch_scrape_results"]
   }
 }

@@ -6,6 +6,11 @@ import os
 import json
 import traceback
 
+
+# batch_scrape_jobs = {
+#     "jobs": []  
+# }
+webhook_storage = {}
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
@@ -15,69 +20,89 @@ def execute():
     request = Request(flask_request)
     data = request.data
 
-    urls = data.get("urls", [])
-    screenshot = data.get("screenshot", False)
-    extracted_markdown = data.get("extractMarkdown", False)
-    extraction_prompt = data.get("extraction_prompt", "").strip()
+    selected_page = data.get("batch_scrape_results")
+    print("selected_page", selected_page)
+    selected_id = selected_page.get("id") if isinstance(selected_page, dict) else None
+    print("selected_data", selected_page)
+    # Case 1: User selects existing job_id|url to check status
+            
+    if selected_id and "|" in selected_id:
+        job_id, selected_url = selected_id.split("|", 1)
 
-    formats = []
-    if extracted_markdown:
-        formats.append("markdown")
-    if screenshot:
-        formats.append("screenshot")
-    if extraction_prompt:
-        formats.append("json")
+        print("Looking for key:", f"{job_id}|{selected_url}")
+        print("Available keys in webhook_storage:")
+        for key in webhook_storage.keys():
+            if key.startswith(job_id):
+                print("-", key)
+        try:
+            data = webhook_storage.get(f"{job_id}|{selected_url}")
+            if data is not None:
+                print("line34", data)
+                return Response(data={"selected_page": data}, metadata={"status": "page_selected"})
 
-    # Optional: define schema for extracted data
-    json_options = None
-    if extraction_prompt:
-        json_options = {
-            "prompt": extraction_prompt,
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "description": {"type": "string"}
-                },
-                "required": ["title", "description"]
+            return Response(data={"error": "Job is not completed yet."}, status_code=202)
+
+        except Exception as e:
+            return Response(data={"error": f"Error loading job: {str(e)}"}, status_code=500)
+
+    # Case 2: User selects "None" — Start a new batch scrape
+    elif selected_id == "None":
+        urls = data.get("urls", [])
+        screenshot = data.get("screenshot", False)
+        extracted_markdown = data.get("extractMarkdown", False)
+        extraction_prompt = data.get("extraction_prompt", "").strip()
+
+        formats = []
+        if extracted_markdown:
+            formats.append("markdown")
+        if screenshot:
+            formats.append("screenshot")
+        if extraction_prompt:
+            formats.append("json")
+
+        json_options = None
+        if extraction_prompt:
+            json_options = {
+                "prompt": extraction_prompt,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"}
+                    },
+                    "required": ["title", "description"]
+                }
             }
-        }
 
+        try:
+            batch_result = firecrawl_client.async_batch_scrape_urls(
+                urls=urls,
+                formats=formats,
+                json_options=json_options,
+                webhook={
+                    "url": "https://6a99-146-70-174-252.ngrok-free.app/batch_scrape/v1/webhook",
+                    "metadata": {"source": "batch_ui"},
+                    "events": ["started", "page", "completed", "failed"]
+                }
+            )
 
-    try:
-        batch_result = firecrawl_client.batch_scrape_urls(
-        urls=urls,  # List of URLs to scrape
-        formats=formats,  # List of output formats (e.g. markdown, screenshot, json)
-        json_options=json_options,  # Optional structured extraction with prompt and schema
-        webhook={
-            "url": "https://6e43-79-127-185-251.ngrok-free.app/batch_scrape/v1/webhook",  # Your webhook endpoint that Firecrawl will POST to
-            "metadata": {"source": "batch_ui"},  # Custom metadata to identify or filter jobs
-            "events": ["started", "page", "completed", "failed"]  # List of events to subscribe to
+            label = extraction_prompt[:40] + "..." if len(extraction_prompt) > 40 else extraction_prompt
 
-            # Note: The structure and supported fields of this webhook object
-            # are defined by Firecrawl's API documentation and may vary depending
-            # on the provider's requirements. Always refer to the latest docs.
-        }
-    )
-        # print("line52",batch_result)
-        # print("type",type(batch_result))
-        # print("dir",dir(batch_result))
-        # print("data",batch_result.data)
-        outputs = []
-        for res in batch_result.data:
-            # print("line57 res", res)
-            outputs.append({
-                "url": res.url if hasattr(res, "url") else "unknown",
-                "result": res.model_dump(exclude_unset=True)
-            })
+            # batch_scrape_jobs["jobs"].append({
+            #     "job_id": batch_result.id,
+            #     "label": label,
+            #     "urls": urls
+            # })
 
-        # print("outputs", outputs)
-        return Response(data=outputs, metadata={"status": "success"})
+            return Response(data={"message": "Batch job submitted", "job_id": batch_result.id, "label": label}, metadata={"status": "submitted"})
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return Response(data={"error": str(e)}, metadata={}, status_code=500)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(data={"error": str(e)}, metadata={}, status_code=500)
+
+    else:
+        return Response(data={"error": "Invalid selection or missing ID."}, status_code=400)
 
 # Define the webhook endpoint that will receive POST requests from Firecrawl
 @router.route("/webhook", methods=["POST"])
@@ -100,23 +125,47 @@ def firecrawl_webhook():
 
 
 # This function handles individual webhook events sent from Firecrawl
+# Global storage
+
+
 def handle_webhook_event(payload):
     event_type = payload.get("type")
     job_id = payload.get("id")
     data = payload.get("data", {})
-    # print("line107",data)
+
     if event_type == "batch_scrape.started":
         print(f"Scrape started for job {job_id}")
+        webhook_storage[job_id] = []
+
     elif event_type == "batch_scrape.page":
+        if job_id not in webhook_storage:
+            webhook_storage[job_id] = []
+
         if isinstance(data, list):
             for item in data:
-                print(f"Page scraped: {item.get('metadata', {}).get('url', '[No URL]')}")
+                url = item.get("metadata", {}).get("url")
+                if url:
+                    webhook_storage[f"{job_id}|{url}"] = item
         elif isinstance(data, dict):
-            print(f"Page scraped: {data.get('metadata', {}).get('url', '[No URL]')}")
+            url = data.get("metadata", {}).get("url")
+            if url:
+                webhook_storage[f"{job_id}|{url}"] = data
         else:
             print(f"Unexpected data format for batch_scrape.page: {data}")
+
     elif event_type == "batch_scrape.completed":
         print(f"Scrape complete for job {job_id}")
+
+        if isinstance(data, list):
+            for item in data:
+                url = item.get("metadata", {}).get("url")
+                if url:
+                    webhook_storage[f"{job_id}|{url}"] = item
+        elif isinstance(data, dict):
+            url = data.get("metadata", {}).get("url")
+            if url:
+                webhook_storage[f"{job_id}|{url}"] = data
+
     elif event_type == "batch_scrape.failed":
         print(f"Scrape failed for job {job_id}")
     else:
@@ -124,79 +173,36 @@ def handle_webhook_event(payload):
 
 
 
-# @router.route("/content", methods=["GET", "POST"])
-# def content():
-#     """
-#     This is the function that goes and fetches the necessary data to populate the possible choices in dynamic form fields.
-#     For example, if you have a module to delete a contact, you would need to fetch the list of contacts to populate the dropdown
-#     and give the user the choice of which contact to delete.
 
-#     An action's form may have multiple dynamic form fields, each with their own possible choices. Because of this, in the /content route,
-#     you will receive a list of content_object_names, which are the identifiers of the dynamic form fields. A /content route may be called for one or more content_object_names.
-
-#     Every data object takes the shape of:
-#     {
-#         "value": "value",
-#         "label": "label"
-#     }
+@router.route("/content", methods=["POST", "GET"])
+def content():
+    request = Request(flask_request)
+    data = request.data
+    content_object_names = data.get("content_object_names", [])
     
-#     Args:
-#         data:
-#             form_data:
-#                 form_field_name_1: value1
-#                 form_field_name_2: value2
-#             content_object_names:
-#                 [
-#                     {   "id": "content_object_name_1"   }
-#                 ]
-#         credentials:
-#             connection_data:
-#                 value: (actual value of the connection)
+    if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
+        content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
 
-#     Return:
-#         {
-#             "content_objects": [
-#                 {
-#                     "content_object_name": "content_object_name_1",
-#                     "data": [{"value": "value1", "label": "label1"}]
-#                 },
-#                 ...
-#             ]
-#         }
-#     """
-#     request = Request(flask_request)
+    content_objects = []
+    print("content_object_name", content_object_names)
+    if "batch_scrape_results" in content_object_names:
+        dropdown_options = [{
+            "value": {"id": "None", "label": "None"},
+            "label": "None"
+        }]
 
-#     data = request.data
+        for key in webhook_storage:
+            if "|" in key:
+                job_id, url = key.split("|", 1)
+                dropdown_options.append({
+                    "value": {"id": key, "label": url},
+                    "label": f"{url} ({job_id[:6]})"
+                })
 
-#     form_data = data.get("form_data", {})
-#     content_object_names = data.get("content_object_names", [])
-    
-#     # Extract content object names from objects if needed
-#     if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
-#         content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
 
-#     content_objects = [] # this is the list of content objects that will be returned to the frontend
+        content_objects.append({
+            "content_object_name": "batch_scrape_results",
+            "data": dropdown_options
+        })
 
-#     for content_object_name in content_object_names:
-#         if content_object_name == "requested_content_object_1":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_1",
-#                     "data": data
-#                 })
-#         elif content_object_name == "requested_content_object_2":
-#             # logic here
-#             data = [
-#                 {"value": "value1", "label": "label1"},
-#                 {"value": "value2", "label": "label2"}
-#             ]
-#             content_objects.append({
-#                     "content_object_name": "requested_content_object_2",
-#                     "data": data
-#                 })
-    
-#     return Response(data={"content_objects": content_objects})
+    return Response(data={"content_objects": content_objects})
