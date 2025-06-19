@@ -30,19 +30,18 @@
         "required":false
       }
     },
-    {
-      "id": "html_type",
+       {
+      "id": "formats",
       "type": "string",
-      "label": "HTML Format",
+      "label": "Select a format(Markdown is default if None Selected)",
       "description": "Choose what kind an HTML Format",
       "ui_options": {
         "ui_widget": "SelectWidget"
       },
       "choices": {
         "values": [
-          { "value": "None" },
           { "value": "Clean HTML" },
-          { "value": "Raw HTML" }
+          { "value": "Markdown" }
         ]
       },
       "validation":{
@@ -59,57 +58,16 @@
       }
     },
     {
-      "id": "extract_json",
-      "type": "boolean",
-      "label": "Json Extraction",
-      "description": "Extract JSON data from the page.",
-      "validation": {
-        "required": false
-      }
-    },
-    {
       "id": "extract_prompt",
       "type": "string",
-      "label": "Extraction Prompt",
+      "label": "Extraction Prompt(Optional)",
       "description": "Enter what you want to extract, e.g., 'Product names and prices'.",
-      "conditions": {
-        "extract_json": true
-      },
-      "validation": {
-        "required": true
-      }
-    },
-    {
-      "id": "extract_markdown",
-      "type": "boolean",
-      "label": "Extract Page as Markdown",
-      "description": "Extract the page content as Markdown format.",
       "validation": {
         "required": false
       }
-    },
-  {
-  "type": "object",
-  "id": "format_options",
-  "label": "Select a format to display",
-  "description":"Must select None to start a new scrape",
-  "ui_options": {
-    "ui_widget": "SelectWidget"
-  },
-  "content": {
-    "type": ["managed"],
-    "content_objects": [
-      {
-        "id": "format_options"
-      }
-    ]
-  },
-  "validation": {
-    "required": true
-  }
-}
+    }
   ],
   "ui_options": {
-    "ui_order": ["url", "screenshot_type","html_type","extract_links","extract_json","extract_prompt", "extract_markdown","scrape_results"]
+    "ui_order": ["url", "screenshot_type","extract_links","extract_prompt", "formats"]
   }
 }

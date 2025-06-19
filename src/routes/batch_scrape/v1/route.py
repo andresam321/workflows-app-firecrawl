@@ -80,7 +80,7 @@ def execute():
                 formats=formats,
                 json_options=json_options,
                 webhook={
-                    "url": "https://6a99-146-70-174-252.ngrok-free.app/batch_scrape/v1/webhook",
+                    "url": "https://firecrawl-connector-278563575784.us-central1.run.app/batch_scrape/v1/webhook",
                     "metadata": {"source": "batch_ui"},
                     "events": ["started", "page", "completed", "failed"]
                 }

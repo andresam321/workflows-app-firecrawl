@@ -23,13 +23,14 @@ COPY / .
 # expose port
 EXPOSE 8080
 #set environment variable on linux: export PORT=2001
-CMD exec gunicorn --bind 8080:8080
+# CMD exec gunicorn --bind 8080:8080
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "main:app"]
 
 # make the entrypoint executable
-RUN chmod +x ./entrypoint.sh
+# RUN chmod +x ./entrypoint.sh
 
 # run the entrypoint to start the Guicorn production server
-ENTRYPOINT ["sh", "entrypoint.sh"]
+# ENTRYPOINT ["sh", "entrypoint.sh"]
 
 
 # RUN in interactive mode

@@ -5,10 +5,9 @@ from firecrawl import FirecrawlApp, JsonConfig
 import os
 import json
 import traceback
+import requests
 
-scrape_results_object = {
-    "latest": []
-}
+
 # Initialize the Firecrawl client using the API key from environment variables
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
@@ -30,63 +29,45 @@ def execute():
             metadata={"affected_rows": 0},
             status_code=400
         )
-    
-    selected_page = data.get("format_options")
-    # print("selected page", selected_page)
-    # Part 1: User selected a page from dropdown
-    if isinstance(selected_page, dict):
-        selected_id = selected_page.get("id")
-
-        # find format 
-        if selected_id and selected_id != "None":
-            stored_results = scrape_results_object.get("lookup", [])
-            matched = stored_results.get(selected_id)
-
-            if not matched:
-                return Response(data={"error": "Selected page not found, start a new scrape"}, status_code=404)
-
-            return Response(
-                data={"selected_page": matched},
-                metadata={"status": "page_selected"}
-            )
-
-        # If user selected "None", scrape fresh
-        elif selected_id == "None":
-            print("User selected None, performing new scrape...")
-
+    format_mapping = {
+        "Markdown": "markdown",
+        "Clean HTML": "html",
+    }
+    selected_format_label = data.get("formats", "None")
+    print("line40", selected_format_label)
     screenshot_type = data.get("screenshot_type", "")
     html_type = data.get("html_type", "")
     extracted_markdown = data.get("extract_markdown", False)
     extract_links = data.get("extract_links", False)
     extract_json = data.get("extract_json", False)
     prompt = data.get("extract_prompt", "").strip()
+    main_format = format_mapping.get(selected_format_label, "markdown")
 
-    json_options = None
+# Check if JSON is empty or lists are empty
+    
+
     formats = []
-    if extracted_markdown:
-        formats.append("markdown")
+    if main_format:
+        formats.append(main_format)
     if extract_links:
         formats.append("links")
     if screenshot_type == "Standard Screenshot":
         formats.append("screenshot")
     elif screenshot_type == "Full Page Screenshot":
         formats.append("screenshot@fullPage")
-    if html_type == "Clean HTML":
-        formats.append('html')
-    elif html_type == "Raw HTML":
-        formats.append("rawHtml")
-    if extract_json:
+    if prompt:
         formats.append("json")
-        if prompt:
-            json_options = JsonConfig(prompt=prompt)
-        else:
-            return Response(
-                data={"error": "Prompt is required for JSON extraction."},
-                metadata={"status": "failed"},
-                status_code=400
-        )
+        json_options = JsonConfig(prompt=prompt)
+    elif extract_json:
+        formats.append("json")
+        json_options = JsonConfig(prompt="")  # or some default if needed
+    else:
+        json_options = None
 
+    # print("SCRAPE DEBUG: json_options =", json_options.model_dump() if json_options else None)
 
+    # print("SCRAPE DEBUG: Formats =", formats)
+    # print("SCRAPE DEBUG: JSON Prompt =", prompt)
     # print(f"Formats to scrape: {formats}")
     # print(f"Calling Firecrawl's scrape_url with URL: {url}, formats: {formats}")
 
@@ -98,42 +79,22 @@ def execute():
             json_options=json_options
         )
 
-        format_labels = {
-            "markdown": "Markdown",
-            "html": "Clean HTML",
-            "rawHtml": "Raw HTML",
-            "screenshot": "Screenshot",
-            "screenshot@fullPage": "Full Page Screenshot",
-            "links": "Links",
-            "json": "JSON"
-        }
-
-
         # Clean JSON response from Pydantic v2
         result_data = scrape_result.model_dump(exclude_unset=True)
-        scrape_results_object["latest"] = result_data
-        # print("scrape results",scrape_results_object["latest"] )
-        outputs = []
-        for format_key, content in result_data.items():
-            # print("line80",format_key)
-            outputs.append({
-                "type": format_key,
-                "description": format_labels.get(format_key, ""),
-                "content": content
-        })
-        # print("individual_outputs", outputs)
-        metadata_block = next((item for item in outputs if item.get("type") == "metadata"), None)
-
-        if metadata_block:
-            metadata_content = metadata_block.get("content", {})
-            status_code = metadata_content.get("statusCode", 200)
-            if status_code != 200:
-                return Response(
-                    data={"error": f"Scrape failed with status code {status_code}. The site may have blocked the request."},
-                    metadata={"status": "scrape_failed"},
-                    status_code=502
-                )
-        return Response(data={"output":outputs}, metadata={"status": "success"})
+        json_data = result_data.get("json", {})
+        if not json_data or all(isinstance(v, list) and len(v) == 0 for v in json_data.values()):
+        # Replace with a meaningful message or default
+            result_data["json"] = {"message": "No data found matching the prompt."}
+        # print("result_data", result_data)
+        return Response(data={"output":result_data}, metadata={"status": "success"})
+    
+    except requests.exceptions.HTTPError as http_err:
+        # Return a clear error message to the user
+        return Response(
+            data={"error": "Scraping failed. The target site may block automated requests or the URL is invalid."},
+            metadata={"status": "scrape_failed"},
+            status_code=502
+        )
 
     except Exception as e:
         import traceback
@@ -141,66 +102,66 @@ def execute():
         return Response(data={"error": str(e)},metadata={"affected_rows": 0},status_code=500)
 
 
-@router.route("/content", methods=["POST","GET"])
-def content():
-    request = Request(flask_request)
-    data = request.data
-    # print("data",data )
-    form_data = data.get("form_data", {})
-    # print("form data",form_data)
-    markdown = form_data.get("markdown", [])  # This is what was selected in the scrape step
-    # print("markdown ", markdown)
-    content_object_names = data.get("content_object_names", [])
-    if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
-        content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
-    # print("content object name", content_object_names)
+# @router.route("/content", methods=["POST","GET"])
+# def content():
+#     request = Request(flask_request)
+#     data = request.data
+#     # print("data",data )
+#     form_data = data.get("form_data", {})
+#     # print("form data",form_data)
+#     markdown = form_data.get("markdown", [])  # This is what was selected in the scrape step
+#     # print("markdown ", markdown)
+#     content_object_names = data.get("content_object_names", [])
+#     if isinstance(content_object_names, list) and content_object_names and isinstance(content_object_names[0], dict):
+#         content_object_names = [obj.get("id") for obj in content_object_names if "id" in obj]
+#     # print("content object name", content_object_names)
 
-    content_objects = []
-    label_map = {
-        "markdown": "Markdown",
-        "rawHtml": "Raw HTML",
-        "html": "Clean HTML",
-        "json": "JSON",
-        "links": "Links",
-        "screenshot": "Screenshot",
-        "screenshot@fullPage": "Full Page Screenshot",
-        "metadata": "Metadata"
-    }
+#     content_objects = []
+#     label_map = {
+#         "markdown": "Markdown",
+#         "rawHtml": "Raw HTML",
+#         "html": "Clean HTML",
+#         "json": "JSON",
+#         "links": "Links",
+#         "screenshot": "Screenshot",
+#         "screenshot@fullPage": "Full Page Screenshot",
+#         "metadata": "Metadata"
+#     }
 
-    for content_object_name in content_object_names:
-        # print("content object name", content_object_name)
-        if content_object_name == "format_options":
-            result_data = scrape_results_object.get("latest", {})
-            if not isinstance(result_data, dict):
-                result_data = {}
-            # print("result dataaaaaaaa", result_data)
-            dropdown_options = [{
-                "value": {"id": "None", "label": "None"},
-                "label": "None"
-            }]
+#     for content_object_name in content_object_names:
+#         # print("content object name", content_object_name)
+#         if content_object_name == "format_options":
+#             result_data = scrape_results_object.get("latest", {})
+#             if not isinstance(result_data, dict):
+#                 result_data = {}
+#             # print("result dataaaaaaaa", result_data)
+#             dropdown_options = [{
+#                 "value": {"id": "None", "label": "None"},
+#                 "label": "None"
+#             }]
             
-            scrape_results_object["lookup"] = {}
+#             scrape_results_object["lookup"] = {}
 
-            for key, content in result_data.items():
-                # print("line 186", key)
-                if content:
-                    readable_label = label_map.get(key, key)
-                    # print("readable lable", readable_label)
-                    dropdown_options.append({
-                        "value": {"id": key, "label": readable_label},
-                        "label": readable_label
-                    })
-                    scrape_results_object["lookup"][key] = {
-                        "meta": {
-                            "format": key,
-                            "content": content,
-                        }
-                    }
+#             for key, content in result_data.items():
+#                 # print("line 186", key)
+#                 if content:
+#                     readable_label = label_map.get(key, key)
+#                     # print("readable lable", readable_label)
+#                     dropdown_options.append({
+#                         "value": {"id": key, "label": readable_label},
+#                         "label": readable_label
+#                     })
+#                     scrape_results_object["lookup"][key] = {
+#                         "meta": {
+#                             "format": key,
+#                             "content": content,
+#                         }
+#                     }
 
-            content_objects.append({
-                "content_object_name": "format_options",
-                "data": dropdown_options
-            })
+#             content_objects.append({
+#                 "content_object_name": "format_options",
+#                 "data": dropdown_options
+#             })
 
 
-    return Response(data={"content_objects": content_objects})
+#     return Response(data={"content_objects": content_objects})
