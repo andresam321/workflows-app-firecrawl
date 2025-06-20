@@ -21,7 +21,7 @@
     {
     "id": "extraction_prompt",
     "type": "string",
-    "label": "Extraction Prompt",
+    "label": "What would you like to extract?",
     "description": "What would you like to extract from all these URLs? (e.g., 'List of products and prices')",
     "validation": {
       "required": true
@@ -33,7 +33,7 @@
       "label": "Capture Screenshot",
       "description": "Capture a screenshot of the page after it has been loaded.",
       "validation": {
-        "required": true
+        "required": false
       }
     },
     {
@@ -53,10 +53,18 @@
         "required": false
       }
     },
+    {
+  "id": "firecrawl_job_id",
+  "type": "string",
+  "label": "Job ID(PASTE JOB ID TO RENDER THE LIST OF RESULTS)",
+  "ui_options": {
+    "hidden": false
+  }
+},
       {
   "type": "object",
   "id": "batch_scrape_results",
-  "label": "Select a url to render",
+  "label": "Select a specfic url to view its Data.",
   "description":"Must select None to start a new batch scrape",
   "ui_options": {
     "ui_widget": "SelectWidget"
@@ -73,8 +81,9 @@
     "required": true
   }
 }
+
   ],
   "ui_options": {
-    "ui_order": ["urls","extraction_prompt", "screenshot","extractStructuredData", "extractMarkdown","batch_scrape_results"]
+    "ui_order": ["urls","extraction_prompt", "screenshot","extractStructuredData", "extractMarkdown","batch_scrape_results","firecrawl_job_id"]
   }
 }
