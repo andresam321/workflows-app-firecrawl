@@ -89,6 +89,11 @@ def execute():
     # Case 2: User selects "None" — Start a new batch scrape
     elif not fc_id:
         urls = data.get("urls", [])
+        if not isinstance(urls, list) or not all(isinstance(u, str) and u.startswith("http") for u in urls):
+                return Response(
+                    data={"error": "Invalid URLs provided. Must be a list of valid http/https strings."},
+                    status_code=400
+                )
         if isinstance(urls, str):
             urls = [urls]
         screenshot = data.get("screenshot", False)
