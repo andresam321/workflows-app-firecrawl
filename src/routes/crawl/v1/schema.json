@@ -40,6 +40,14 @@
       "label": "Html",
       "default": false
     },
+    {
+  "id": "firecrawl_job_id",
+  "type": "string",
+  "label": "Job ID(PASTE JOB ID TO RENDER THE LIST OF RESULTS)",
+  "ui_options": {
+    "hidden": false
+  }
+},
 {
   "type": "object",
   "id": "crawl_results",

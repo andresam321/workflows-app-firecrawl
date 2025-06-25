@@ -34,7 +34,7 @@ firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 def execute():
     request = Request(flask_request)
     data = request.data
-
+    run_id_flag = data.get("run_id", False)
     selected_page = data.get("extract_results")
     print("Selected page object:", selected_page)
     selected_id = selected_page.get("id") if isinstance(selected_page, dict) else selected_page
@@ -114,6 +114,7 @@ def execute():
                 status_code=500
             )
     # Case 2: User selects "None" — Start a new batch scrape
+    # if run_id_flag:
     elif not fc_id_raw:
             urls = data.get("urls", [])
             print("urls line 78", urls)

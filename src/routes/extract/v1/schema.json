@@ -40,7 +40,6 @@
   "type": "string",
   "label": "Paste In this format ['job_id_1', 'job_id_2']",
   "description": "JSON array of job IDs to display results",
-  "default": "[\"job_id_1\"]",
   "ui_options": {
         "ui_widget": "CodeblockWidget",
         "ui_options": {
@@ -73,6 +72,6 @@
 }
   ],
   "ui_options": {
-    "ui_order": ["url","extract_query","structured_schema", "enable_web_search","extract_results","firecrawl_job_id"]
+    "ui_order": ["url","extract_query","structured_schema", "enable_web_search","extract_results","firecrawl_job_id", "run_id"]
   }
 }
