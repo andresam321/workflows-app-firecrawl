@@ -6,23 +6,7 @@ import os
 import json
 import traceback
 
-map_results_object = {
-    'latest': []
-}
-# Initialize the Firecrawl client using the API key from environment variables
-firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
-from workflows_cdk import Response, Request
-from flask import request as flask_request
-from main import router
-from firecrawl import FirecrawlApp
-import os
-import traceback
-
-# Memory store for scraped results
-map_results_object = {}
-
-# Initialize Firecrawl client
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
 @router.route("/execute", methods=["GET", "POST"])
@@ -36,7 +20,7 @@ def execute():
 
     url = data.get("url", "").strip()
     search_term = data.get("search_term", "").strip().lower()
-    start_new_map = data.get("start_new_map", False)
+
 
     if not url.startswith("http"):
         return Response(
@@ -46,26 +30,7 @@ def execute():
         )
 
     try:
-        # Use memory if available and not forcing remap
-        if url in map_results_object and not start_new_map:
-            all_links = map_results_object[url]
-            if search_term:
-                filtered_links = [link for link in all_links if search_term in link.lower()]
-            else:
-                filtered_links = all_links
-            if not filtered_links:
-                return Response(
-                    data={"message": f"No links found for '{search_term}' on {url}."},
-                    metadata={"status": "no_matches"},
-                    status_code=200  # Still 200, just no results
-            )
 
-            return Response(
-                data={"links": filtered_links},
-                metadata={"status": "from_memory"}
-            )
-
-        # Call Firecrawl (new map or forced remap)
         scrape_result = firecrawl_client.map_url(
             url=url,
             search=search_term if search_term else None
@@ -73,14 +38,16 @@ def execute():
 
         # Parse and store results
         result_data = scrape_result.model_dump(exclude_unset=True)
+        # print("line78", result_data)
         links = result_data.get("links", [])
 
-        # Store in memory under URL key
-        map_results_object[url] = links
-        print("line80",map_results_object)
+
         return Response(
             data={"links": links},
-            metadata={"status": "fresh_scrape"}
+            metadata={
+                "status": "fresh_scrape",
+                "affected_rows": len(result_data.get("links", []))
+            }
         )
 
     except Exception as e:
