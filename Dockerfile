@@ -1,30 +1,39 @@
+# Use a lightweight Python image
 FROM python:3.10-slim-buster
-ARG ENVIRONMENT
 
 WORKDIR /usr/src/app
 
-# upgrade to latest pip
-RUN pip install --upgrade pip
+# Install system dependencies
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git
+    apt-get install -y git curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install workflows-cdk package
+# upgrade pip
+RUN pip install --upgrade pip
+
+# Install workflows-cdk
 RUN pip install git+https://github.com/stacksyncdata/workflows-cdk.git@prod
 
-# install dependencies
+# Install Python dependencies
 COPY requirements.txt ./
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
-# copy the scripts
-COPY / .
+# Copy your app code
+COPY . .
 
-# setup flask server
-# expose port
+# Make sure entrypoint script is executable (if used)
+RUN chmod +x ./config/entrypoint.sh
+
+# Expose the port for Google Cloud Run
 EXPOSE 8080
-#set environment variable on linux: export PORT=2001
-# CMD exec gunicorn --bind 8080:8080
+
+# Start the app using Gunicorn with config
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "main:app"]
+
+
+
 
 # make the entrypoint executable
 # RUN chmod +x ./entrypoint.sh

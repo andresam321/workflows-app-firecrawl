@@ -9,7 +9,13 @@ import requests
 
 
 # Initialize the Firecrawl client using the API key from environment variables
+
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+
+# print("🚀 scrape.py was loaded")
+@router.route("/test", methods=["GET"])
+def test_router():
+    return {"router": "working"}, 200
 
 @router.route("/execute", methods=["GET", "POST"])
 def execute():

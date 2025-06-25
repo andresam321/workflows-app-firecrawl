@@ -129,7 +129,7 @@ def execute():
                 formats=formats,
                 json_options=json_options,
                 webhook={
-                    "url": "https://79f3-73-15-183-86.ngrok-free.app/batch_scrape/v1/webhook",
+                    "url": "https://e031-185-98-169-79.ngrok-free.app/batch_scrape/v1/webhook",
                     "metadata": {"source": "batch_ui"},
                     "events": ["started", "page", "completed", "failed"]
                 }

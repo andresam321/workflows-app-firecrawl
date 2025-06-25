@@ -10,12 +10,27 @@ import builtins
 
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
+# @router.route("/test", methods=["POST"])
+# def test():
+#     if flask_request.is_json:
+#         data = flask_request.get_json()
+#         print("Got JSON:", data)
+#     else:
+#         data = flask_request.form.to_dict()
+#         print("Got FORM:", data)
+
+#     return {"status": "ok", "received": data}, 200
 
 @router.route("/execute", methods=["POST", "GET"])
 def execute():
+
     request = Request(flask_request)
     data = request.data
-    form_data = data.get("form_data", {})
+    
+    if flask_request.is_json:
+        data = flask_request.get_json()
+    else:
+        data = flask_request.form.to_dict()
 
     url = data.get("url", "").strip()
     if not url.startswith("http"):
@@ -109,11 +124,25 @@ def execute():
         if formats:
             crawl_kwargs["scrape_options"] = ScrapeOptions(formats=formats)
 
+         # 🛠 TEMP FIX: Firecrawl's `async_crawl_url()` internally references `max_concurrency` 
+        # without defining or requiring it, causing a NameError.
+        # This monkey patch adds `max_concurrency` to Python's builtins to prevent the crash.
+        # REMOVE THIS ONCE THE FIRECRAWL SDK FIXES THE BUG.
+        original_async_crawl_url = firecrawl_client.async_crawl_url
+
+        def safe_async_crawl_url(*args, **kwargs):
+            if "max_concurrency" not in kwargs:
+                builtins.max_concurrency = 3  # Prevents NameError inside SDK
+            return original_async_crawl_url(*args, **kwargs)
+
+        firecrawl_client.async_crawl_url = safe_async_crawl_url
+
         try:
+           
             crawl_results = firecrawl_client.async_crawl_url(
                 **crawl_kwargs,
                 webhook={
-                    "url": "https://79f3-73-15-183-86.ngrok-free.app/crawl/v1/webhook",
+                    "url": "https://e031-185-98-169-79.ngrok-free.app/crawl/v1/webhook",
                     "metadata": {"source": "batch_ui"},
                     "events": ["started", "page", "completed", "failed"]
                 }
