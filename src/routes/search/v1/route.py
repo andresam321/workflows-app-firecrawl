@@ -7,11 +7,11 @@ import os
 import json
 import traceback
 
-search_results_object = {
-    "latest": []
-}
+# search_results_object = {
+#     "latest": []
+# }
 # Initialize the Firecrawl client using the API key from environment variables
-print("search res object", search_results_object)
+# print("search res object", search_results_object)
 firecrawl_client = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
 @router.route("/execute", methods=["POST", "GET"])
@@ -36,27 +36,27 @@ def execute():
     print("selected page", selected_page)
 
     # Part 1: User selected a page from dropdown
-    if isinstance(selected_page, dict):
-        selected_url = selected_page.get("url")
+    # if isinstance(selected_page, dict):
+    #     selected_url = selected_page.get("url")
 
         # Reuse a previous crawl
-        if selected_url and selected_url != "None":
-            stored_results = search_results_object.get("latest", [])
-            matched = next(
-                (r for r in stored_results if r.get("url") == selected_url),
-                None
-            )
-            if not matched:
-                return Response(data={"error": "Selected page not found"}, status_code=404)
+        # if selected_url and selected_url != "None":
+        #     stored_results = search_results_object.get("latest", [])
+        #     matched = next(
+        #         (r for r in stored_results if r.get("url") == selected_url),
+        #         None
+        #     )
+        #     if not matched:
+        #         return Response(data={"error": "Selected page not found"}, status_code=404)
 
-            return Response(
-                data={"selected_page": matched},
-                metadata={"status": "page_selected"}
-            )
+        #     return Response(
+        #         data={"selected_page": matched},
+        #         metadata={"status": "page_selected"}
+        #     )
 
-        # If user selected "None", crawl fresh
-        elif selected_url == "None":
-            print("User selected None, performing new crawl...")
+        # # If user selected "None", crawl fresh
+        # elif selected_url == "None":
+        #     print("User selected None, performing new crawl...")
 
     # Extract values from data after validation
     search_query = form.prompt.data
@@ -125,7 +125,7 @@ def execute():
     try:
         search_results = firecrawl_client.search(**search_kwargs)
         result_data = search_results.model_dump(exclude_unset=True)
-        search_results_object["latest"] = result_data.get("data", [])
+        # search_results_object["latest"] = result_data.get("data", [])
         return Response(data=result_data, metadata={"status": "success"})
 
     except Exception as e:
@@ -209,54 +209,54 @@ def content():
                     {"value": "中文", "label": "中文"}
                 ]
             })
-        if content_object_name == "search_results":
-            results = search_results_object.get("latest", [])
+        # if content_object_name == "search_results":
+        #     results = search_results_object.get("latest", [])
 
-            dropdown_options = [{
-                "value": {
-                        "id": "None",
-                        "label": "None"
-                    },
-                "label": "None"
-            }]
+        #     dropdown_options = [{
+        #         "value": {
+        #                 "id": "None",
+        #                 "label": "None"
+        #             },
+        #         "label": "None"
+        #     }]
 
-            if "lookup" not in search_results_object:
-                search_results_object["lookup"] = {}
+        #     if "lookup" not in search_results_object:
+        #         search_results_object["lookup"] = {}
 
-            for item in results:
-                # print("line226 item", item)
-                metadata = item.get("metadata", {})
-                title = item.get("title", "Untitled Page").strip()
-                url = item.get("url", "No URL")
-                description = item.get("description")
+        #     for item in results:
+        #         # print("line226 item", item)
+        #         metadata = item.get("metadata", {})
+        #         title = item.get("title", "Untitled Page").strip()
+        #         url = item.get("url", "No URL")
+        #         description = item.get("description")
                 
-                # print("url", url)
+        #         # print("url", url)
 
-                dropdown_options.append({
-                    "value": {
-                        "url": url,
-                        "label": title,
+        #         dropdown_options.append({
+        #             "value": {
+        #                 "url": url,
+        #                 "label": title,
                         
-                        },
-                    "label": f"{title} ({url})"
-                })
-                search_results_object["lookup"][url] = {
-                        "meta": {
-                            "label": title,
-                            "url": url,
-                            "description": description,
+        #                 },
+        #             "label": f"{title} ({url})"
+        #         })
+        #         search_results_object["lookup"][url] = {
+        #                 "meta": {
+        #                     "label": title,
+        #                     "url": url,
+        #                     "description": description,
 
-                        },
-                        "formats": {
-                            "markdown": item.get("markdown"),
-                            "rawHtml": item.get("rawHtml"),
-                            "screenshot": item.get("screenshot")
-                        }
-                    }
-            content_objects.append({
-                "content_object_name": "search_results",
-                "data": dropdown_options
-            })
-            print("content_objects", content_objects)
+        #                 },
+        #                 "formats": {
+        #                     "markdown": item.get("markdown"),
+        #                     "rawHtml": item.get("rawHtml"),
+        #                     "screenshot": item.get("screenshot")
+        #                 }
+        #             }
+        #     content_objects.append({
+        #         "content_object_name": "search_results",
+        #         "data": dropdown_options
+        #     })
+        #     print("content_objects", content_objects)
 
     return Response(data={"content_objects": content_objects})

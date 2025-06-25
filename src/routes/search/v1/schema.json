@@ -6,7 +6,7 @@
     {
       "id": "prompt",
       "type": "string",
-      "label": "What would you like to search?",
+      "label": "Enter your search query",
       "validation": {
         "required": true
       }
@@ -86,7 +86,7 @@
     {
       "type": "object",
       "id": "links_header",
-      "label": "Include URLs Where Data Was Found",
+      "label": "Show URLs where content was found",
       "fields": []
     },
     {
@@ -119,7 +119,7 @@
     {
       "id": "screenshot_type",
       "type": "string",
-      "label": "Select Screenshot Type",
+      "label": "Choose a screenshot format",
       "description": "Choose what kind of screenshot you want",
       "ui_options": {
         "ui_widget": "SelectWidget"
@@ -136,27 +136,7 @@
       "validation": {
         "required": false
       }
-    },
-    {
-  "type": "object",
-  "id": "search_results",
-  "label": "Select a Searched Page",
-  "description":"Must Select None to start a new search",
-  "ui_options": {
-    "ui_widget": "SelectWidget"
-  },
-  "content": {
-    "type": ["managed"],
-    "content_objects": [
-      {
-        "id": "search_results"
-      }
-    ]
-  },
-  "validation": {
-    "required": true
-  }
-}
+    }
   ],
   "ui_options": {
     "ui_order": [
@@ -167,8 +147,7 @@
       "screenshot_type",
       "lang",
       "country",
-      "tbs",
-      "search_results"
+      "tbs"
     ]
   }
 }

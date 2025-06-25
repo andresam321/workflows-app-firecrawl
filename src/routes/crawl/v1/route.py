@@ -27,10 +27,11 @@ def execute():
     request = Request(flask_request)
     data = request.data
     
-    if flask_request.is_json:
-        data = flask_request.get_json()
-    else:
-        data = flask_request.form.to_dict()
+    # use this to test on postman
+    # if flask_request.is_json:
+    #     data = flask_request.get_json()
+    # else:
+    #     data = flask_request.form.to_dict()
 
     url = data.get("url", "").strip()
     if not url.startswith("http"):
